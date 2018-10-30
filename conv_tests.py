@@ -54,4 +54,20 @@ class WeightsTests(unittest.TestCase):
 #        plt.imshow(weights.synthesize().imag.numpy()[0])
 #        plt.show()
 
+class HConvTests(unittest.TestCase):
+    def test_no_crash(self):
+        hconv = conv.HConv(5, 10, 5, 2, pad=False)
+        
+        input = torch.randn(2, 5, 20, 20, 2, requires_grad=True)
+        output = hconv(input)
+
+        plt.imshow(output[0, 0, ..., 0].detach().numpy())
+        plt.show()
+
+#    def test_backprop(self):
+#        hconv = conv.HConv(5, 10, 5, 2, pad=False)
+#        
+#        input = torch.randn(2, 5, 20, 20, 2, requires_grad=True)
+#        torch.autograd.gradcheck(lambda t: hconv(conv.CTen(t)).t.sum(), (input,), atol=1e-2, rtol=0.01)
+
 unittest.main()
