@@ -45,7 +45,7 @@ class CrossConv(nn.Module):
         for i, stream in enumerate(streams):
             checker.check(stream, ['n', -1, 'hi', 'wi', 2], name='in_stream {}'.format(i))
 
-        out_streams = [(0 if repr != 0 else None) for repr in self.in_repr]
+        out_streams = [(0 if repr != 0 else None) for repr in self.out_repr]
 
         for in_ord, in_stream in enumerate(streams):
             if stream is None:
@@ -75,12 +75,15 @@ class HNet(nn.Module):
     def __init__(self, radius, layout=hnet_default_layout, pad=False):
         super(HNet, self).__init__()
         
-        seq = []
-        for prev, next in zip(layout[:-1], layout[1:]):
-            seq.append(CrossConv(prev, next, radius, pad=pad))
-        self.seq = nn.Sequential(*seq)
+        self.seq = nn.ModuleList()
+        for i, (prev, next) in enumerate(zip(layout[:-1], layout[1:])):
+            self.seq.append(CrossConv(prev, next, radius, pad=pad, name='hconv{}'.format(i)))
 
     def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', 1, 'wo', 'ho']:
         x_cmplx = torch.stack([x, torch.zeros_like(x)], dim=-1)
-        y_cmplx = self.seq(x_cmplx)
-        return y_cmplx[..., 0]
+        
+        y_cmplx = (x_cmplx, )
+        for hconv in self.seq:
+            y_cmplx = hconv(*y_cmplx)
+
+        return y_cmplx[0][..., 0]
