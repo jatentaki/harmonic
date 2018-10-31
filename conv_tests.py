@@ -10,7 +10,7 @@ class WeightsTests(unittest.TestCase):
         diam = 2 * rad + 1
 
         r = torch.ones(nfmaps, rad + 1, dtype=torch.float32)
-        phi = torch.zeros(2)
+        phi = torch.zeros(nfmaps)
 
         weights = conv.Weights(r, phi, 0)
 

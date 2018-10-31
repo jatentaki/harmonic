@@ -1,12 +1,16 @@
-import torch
+import torch, itertools
 import torch.nn as nn
 from torch_localize import localized_module
+from torch_dimcheck import ShapeChecker
 from conv import HConv
 
 '''
 Glossary:
     stream - a set of hidden layers of same rotation order
 '''
+
+def ords2s(in_ord, out_ord):
+    return '{}_{}'.format(in_ord, out_ord)
 
 @localized_module
 class CrossConv(nn.Module):
@@ -29,7 +33,7 @@ class CrossConv(nn.Module):
 
             name = 'HConv {}x{} -> {}x{}'.format(in_mult, in_ord, out_mult, out_ord)
             conv = HConv(in_mult, out_mult, radius, in_ord - out_ord, pad=pad, name=name)
-            self.convs[(in_ord, out_ord)] = conv
+            self.convs[ords2s(in_ord, out_ord)] = conv
 
     def forward(self, *streams):
         if len(streams) != len(self.in_repr):
@@ -37,7 +41,11 @@ class CrossConv(nn.Module):
             msg = fmt.format(self.in_repr, len(self.in_repr), len(streams))
             raise ValueError(msg)
 
-        out_streams = [0 for repr in self.in_repr if repr else None]
+        checker = ShapeChecker()
+        for i, stream in enumerate(streams):
+            checker.check(stream, ['n', -1, 'hi', 'wi', 2], name='in_stream {}'.format(i))
+
+        out_streams = [(0 if repr != 0 else None) for repr in self.in_repr]
 
         for in_ord, in_stream in enumerate(streams):
             if stream is None:
@@ -47,14 +55,32 @@ class CrossConv(nn.Module):
                 if out_streams[out_ord] is None:
                     continue
 
-                conv = self.convs[(in_ord, out_ord)]
+                conv = self.convs[ords2s(in_ord, out_ord)]
                 out_streams[out_ord] += conv(in_stream)
+
+        for i, stream in enumerate(out_streams):
+            checker.check(stream, ['n', -1, 'ho', 'wo', 2], name='out_stream {}'.format(i))
 
         return out_streams
             
 
+hnet_default_layout = [
+    (1, ),
+    (5, 5, 5),
+    (3, 2),
+    (1, ),
+]
+
 class HNet(nn.Module):
-    def __init__(self, layout=hnet_default_layout):
+    def __init__(self, radius, layout=hnet_default_layout, pad=False):
         super(HNet, self).__init__()
+        
+        seq = []
+        for prev, next in zip(layout[:-1], layout[1:]):
+            seq.append(CrossConv(prev, next, radius, pad=pad))
+        self.seq = nn.Sequential(*seq)
 
-
+    def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', 1, 'wo', 'ho']:
+        x_cmplx = torch.stack([x, torch.zeros_like(x)], dim=-1)
+        y_cmplx = self.seq(x_cmplx)
+        return y_cmplx[..., 0]

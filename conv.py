@@ -2,15 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_localize import localized_module
-from utils import tchk, _typechk
+from torch_dimcheck import dimchecked
 
 import matplotlib.pyplot as plt
 
 any_float=(torch.float16, torch.float32, torch.float64)
     
-def h_conv(x, w, pad=False):
-    tchk(x, shape=(-1, -1, -1, -1, 2), dtype=any_float)
-    tchk(w, shape=(-1, -1, -1, -1, 2), dtype=any_float)
+@dimchecked
+def h_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
+           w: ['f_out', 'f_in', 'kh', 'kw', 2],
+           pad=False) -> ['b', 'f_out', 'oh', 'ow', 2]:
 
     if pad:
         padding = w.shape[3] // 2
@@ -44,7 +45,8 @@ class HConv(nn.Module):
 
         self.weights = Weights(radial, betas, order)
 
-    def forward(self, t):
+    @dimchecked
+    def forward(self, t: ['b', 'fi', 'hi', 'wi', 2]) -> ['b', 'fo', 'ho', 'wo', 2]:
         kernel = self.weights.synthesize()
         kernel = kernel.reshape(
             self.out_channels, self.in_channels, self.weights.diam, self.weights.diam, 2
@@ -54,19 +56,12 @@ class HConv(nn.Module):
 
 
 class Weights(nn.Module):
-    def __init__(self, r, beta, order):
-        '''
-            r - [n_features, radius]
-            beta - [n_features]
-        '''
-        tchk(r, dtype=any_float)
-
+    @dimchecked
+    def __init__(self, r: ['n_f', 'r'], beta: ['n_f'], order):
         super(Weights, self).__init__()
 
         self.n_features = r.shape[0]
         self.radius = r.shape[1] - 1
-
-        tchk(beta, shape=(self.n_features,), dtype=any_float)
 
         self.r = r
         self.diam = 2 * self.radius + 1
@@ -103,13 +98,15 @@ class Weights(nn.Module):
         ys = xs.reshape(-1, 1)
         self.register_buffer('angles', torch.atan2(xs, ys).unsqueeze(0))
 
-    def harmonics(self):
+    @dimchecked
+    def harmonics(self) -> ['f', 'd', 'd', 2]:
         real = torch.cos(self.order * self.angles + self.beta)
         imag = torch.sin(self.order * self.angles + self.beta)
 
         return torch.stack([real, imag], dim=-1)
 
-    def radial(self):
+    @dimchecked
+    def radial(self) -> ['f', 'd', 'd']:
         # pad radial function with 0 so that we can redirect out of bounds
         # accesses there
         r_ = torch.cat([self.r, torch.zeros(self.n_features, 1)], dim=1)
@@ -122,7 +119,8 @@ class Weights(nn.Module):
     def lowpass(self, w):
         return w #TODO: actual filtering
 
-    def synthesize(self):
+    @dimchecked
+    def synthesize(self) -> ['f', 'r', 'r', 2]:
         radial = self.radial().unsqueeze(-1)
         harmonics = self.harmonics()
 
