@@ -3,14 +3,11 @@ import conv
 
 class WeightsTests(unittest.TestCase):
     def test_radial(self):
-        nfmaps = 2
+        f_in, f_out = 2, 3
         rad = 5
         diam = 2 * rad + 1
 
-        r = torch.ones(nfmaps, rad + 1, dtype=torch.float32)
-        phi = torch.zeros(nfmaps)
-
-        weights = conv.Weights(r, phi, 0)
+        weights = conv.Weights(f_in, f_out, rad, 0)
 
         xs = torch.linspace(-rad, rad, diam).reshape(-1, 1)
         ys = xs.reshape(1, -1)
@@ -22,25 +19,6 @@ class WeightsTests(unittest.TestCase):
         result = weights.radial()
         self.assertTrue(torch.allclose(result, expected))
 
-    def test_harmonics(self):
-        nfmaps = 2
-        rad = 5
-        diam = 2 * rad + 1
-
-        r = torch.ones(nfmaps, rad + 1, dtype=torch.float32)
-        phi = torch.zeros(2)
-
-        weights = conv.Weights(r, phi, 2)
-
-    def test_synthesize(self):
-        nfmaps = 2
-        rad = 5
-        diam = 2 * rad + 1
-
-        r = torch.ones(nfmaps, rad + 1, dtype=torch.float32)
-        phi = torch.zeros(2)
-
-        weights = conv.Weights(r, phi, 2)
 
 class HConvTests(unittest.TestCase):
     def test_no_crash(self):

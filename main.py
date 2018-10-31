@@ -49,21 +49,27 @@ def accuracy(output, target, topk=(1,)):
 train_ixs = torch.arange(10000)
 test_ixs = torch.arange(2000)
 
-for epoch in range(20):
+n_epochs = 20
+batch_size = 100
+n_train = 250
+n_test = 100
+
+for epoch in range(n_epochs):
     random.shuffle(train_ixs)
-    for batch in range(5):
-        sample = train_ixs[100*batch:100*(batch+1)]
+    for batch in range(n_train // batch_size):
+        sample = train_ixs[batch_size*batch:batch_size*(batch+1)]
         maps = net(train_x[sample, ...])
         predictions = maps.sum(dim=(2, 3))
         optim.zero_grad()
         loss = loss_fn(predictions, train_y[sample, ...])
         print('Loss', loss.item())
         loss.backward()
+        print(predictions.grad)
         optim.step()
 
     random.shuffle(test_ixs)
-    for batch in range(5):
-        sample = test_ixs[100*batch:100*(batch+1)]
+    for batch in range(n_test // batch_size):
+        sample = test_ixs[batch_size*batch:batch_size*(batch+1)]
         maps = net(test_x[sample, ...])
         predictions = maps.sum(dim=(2, 3))
         acc = accuracy(predictions, test_y[sample, ...])

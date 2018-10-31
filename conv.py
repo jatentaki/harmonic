@@ -1,4 +1,4 @@
-import torch, itertools
+import torch, itertools, math
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_localize import localized_module
@@ -35,41 +35,34 @@ class HConv(nn.Module):
         self.order = order
         self.pad = pad
 
-        total_channels = in_channels * out_channels
-
-        # TODO: proper initialization
-        radial = torch.randn(total_channels, radius + 1, requires_grad=True)
-        betas = torch.zeros(total_channels, requires_grad=True)
-        nn.init.uniform_(betas, 0, 2 * 3.14)
-
-        self.weights = Weights(radial, betas, order)
+        self.weights = Weights(in_channels, out_channels, radius, order)
 
     @dimchecked
     def forward(self, t: ['b', 'fi', 'hi', 'wi', 2]) -> ['b', 'fo', 'ho', 'wo', 2]:
         kernel = self.weights.synthesize()
-        kernel = kernel.reshape(
-            self.out_channels, self.in_channels, self.weights.diam, self.weights.diam, 2
-        )
 
         return h_conv(t, kernel, pad=self.pad)
 
 
 class Weights(nn.Module):
-    @dimchecked
-    def __init__(self, r: ['n_f', 'r'], beta: ['n_f'], order):
+    def __init__(self, in_channels, out_channels, radius, order, initialize=True):
         super(Weights, self).__init__()
 
-        self.n_features = r.shape[0]
-        self.radius = r.shape[1] - 1
-
-        self.r = r
+        self.order = order
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.total_channels = in_channels * out_channels
+        self.radius = radius
         self.diam = 2 * self.radius + 1
 
-        self.beta = beta.reshape(-1, 1, 1)
-        self.order = order
+        self.r = torch.randn(self.total_channels, radius + 1, requires_grad=True)
+        self.betas = torch.randn(self.total_channels, 1, 1, requires_grad=True)
 
         self.precompute_bilinear()
         self.precompute_angles()
+        if initialize:
+            self.initialize_weights()
+
     
     def precompute_bilinear(self):
         # compute radii on grid
@@ -96,11 +89,23 @@ class Weights(nn.Module):
         xs = xs.reshape(1, -1)
         ys = xs.reshape(-1, 1)
         self.register_buffer('angles', torch.atan2(xs, ys).unsqueeze(0))
+    
+    
+    def initialize_weights(self):
+        # we want to initialize such that assuming input from N(0, 1) the output
+        # is as well in N(0, 1). This means each weight should also be from
+        # Gaussian with mean 0 and sigma = 2 / sqrt(n_contributing_pixels).
+        
+        n_contributing = self.total_channels * self.diam ** 2
+        std = 2. / math.sqrt(n_contributing)
+        nn.init.normal_(self.r, mean=0, std=std)
+        nn.init.uniform_(self.betas, 0, 2 * 3.14)
+
 
     @dimchecked
     def harmonics(self) -> ['f', 'd', 'd', 2]:
-        real = torch.cos(self.order * self.angles + self.beta)
-        imag = torch.sin(self.order * self.angles + self.beta)
+        real = torch.cos(self.order * self.angles + self.betas)
+        imag = torch.sin(self.order * self.angles + self.betas)
 
         return complex(real, imag)
 
@@ -108,7 +113,7 @@ class Weights(nn.Module):
     def radial(self) -> ['f', 'd', 'd']:
         # pad radial function with 0 so that we can redirect out of bounds
         # accesses there
-        r_ = torch.cat([self.r, torch.zeros(self.n_features, 1)], dim=1)
+        r_ = torch.cat([self.r, torch.zeros(self.total_channels, 1)], dim=1)
 
         rf = r_[:, self.floor]
         rc = r_[:, self.ceil]
@@ -119,11 +124,16 @@ class Weights(nn.Module):
         return w #TODO: actual filtering
 
     @dimchecked
-    def synthesize(self) -> ['f', 'r', 'r', 2]:
+    def synthesize(self) -> ['f_out', 'f_in', 'r', 'r', 2]:
         radial = self.radial().unsqueeze(-1)
         harmonics = self.harmonics()
 
-        return self.lowpass(radial * harmonics)
+        kernel = self.lowpass(radial * harmonics)
+        kernel = kernel.reshape(
+            self.out_channels, self.in_channels, self.diam, self.diam, 2
+        )
+
+        return kernel
 
 
 def ords2s(in_ord, out_ord):
