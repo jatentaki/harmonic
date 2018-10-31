@@ -7,8 +7,7 @@ class HNetTests(unittest.TestCase):
 
     def test_forward(self):
         hnet = HNet(4)
-        print(repr(hnet))
-        input = torch.randn(3, 1, 60, 60)
+        input = torch.randn(7, 1, 60, 60)
 
         output = hnet(input)
 
