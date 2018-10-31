@@ -4,6 +4,7 @@ from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 from conv import CrossConv
 from nonl import ScalarGate
+from pooling import avg_pool2d
 
 
 hnet_default_layout = [
@@ -32,6 +33,8 @@ class HNetBlock(nn.Module):
             y = self.nonl(*y)
         y = self.conv(*y)
 
+#        y = [(avg_pool2d(t, 2) if t is not None else None) for t in y]
+
         return y
 
 
@@ -47,9 +50,10 @@ class HNet(nn.Module):
                 name='hblock{}'.format(i)
             )
             self.seq.append(block)
+        
 
     @dimchecked
-    def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', 1, 'wo', 'ho']:
+    def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', -1, 'wo', 'ho']:
         x_cmplx = torch.stack([x, torch.zeros_like(x)], dim=-1)
         
         y_cmplx = (x_cmplx, )
