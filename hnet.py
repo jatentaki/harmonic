@@ -33,8 +33,6 @@ class HNetBlock(nn.Module):
             y = self.nonl(*y)
         y = self.conv(*y)
 
-#        y = [(avg_pool2d(t, 2) if t is not None else None) for t in y]
-
         return y
 
 

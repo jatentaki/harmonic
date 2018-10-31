@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked, ShapeChecker
 
+from cmplx import complex
+
 @dimchecked
 def h_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
            w: ['f_out', 'f_in', 'kh', 'kw', 2],
@@ -20,7 +22,7 @@ def h_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
     imag = F.conv2d(x[..., 0], w[..., 1], padding=padding) + \
            F.conv2d(x[..., 1], w[..., 0], padding=padding)
 
-    return torch.stack([real, imag], dim=-1)
+    return complex(real, imag)
 
 @localized_module
 class HConv(nn.Module):
@@ -35,6 +37,7 @@ class HConv(nn.Module):
 
         total_channels = in_channels * out_channels
 
+        # TODO: proper initialization
         radial = torch.randn(total_channels, radius + 1, requires_grad=True)
         betas = torch.zeros(total_channels, requires_grad=True)
         nn.init.uniform_(betas, 0, 2 * 3.14)
@@ -99,7 +102,7 @@ class Weights(nn.Module):
         real = torch.cos(self.order * self.angles + self.beta)
         imag = torch.sin(self.order * self.angles + self.beta)
 
-        return torch.stack([real, imag], dim=-1)
+        return complex(real, imag)
 
     @dimchecked
     def radial(self) -> ['f', 'd', 'd']:

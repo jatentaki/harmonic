@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 from torch_dimcheck import ShapeChecker
-
-def magnitude(t: [..., 2]) -> [...]:
-    return (t ** 2).sum(dim=-1) ** 0.5
+from cmplx import magnitude
 
 class ScalarGate(nn.Module):
     def __init__(self, repr):
