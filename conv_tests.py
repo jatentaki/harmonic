@@ -1,7 +1,5 @@
-import torch
+import torch, unittest
 import conv
-import unittest
-import matplotlib.pyplot as plt
 
 class WeightsTests(unittest.TestCase):
     def test_radial(self):
@@ -34,11 +32,6 @@ class WeightsTests(unittest.TestCase):
 
         weights = conv.Weights(r, phi, 2)
 
-#        plt.imshow(weights.harmonics(phi).real.numpy()[0])
-#        plt.figure()
-#        plt.imshow(weights.harmonics(phi).imag.numpy()[0])
-#        plt.show()
-
     def test_synthesize(self):
         nfmaps = 2
         rad = 5
@@ -49,11 +42,6 @@ class WeightsTests(unittest.TestCase):
 
         weights = conv.Weights(r, phi, 2)
 
-#        plt.imshow(weights.synthesize().real.numpy()[0])
-#        plt.figure()
-#        plt.imshow(weights.synthesize().imag.numpy()[0])
-#        plt.show()
-
 class HConvTests(unittest.TestCase):
     def test_no_crash(self):
         hconv = conv.HConv(5, 10, 5, 2, pad=False)
@@ -61,13 +49,19 @@ class HConvTests(unittest.TestCase):
         input = torch.randn(2, 5, 20, 20, 2, requires_grad=True)
         output = hconv(input)
 
-        plt.imshow(output[0, 0, ..., 0].detach().numpy())
-        plt.show()
 
-#    def test_backprop(self):
-#        hconv = conv.HConv(5, 10, 5, 2, pad=False)
-#        
-#        input = torch.randn(2, 5, 20, 20, 2, requires_grad=True)
-#        torch.autograd.gradcheck(lambda t: hconv(conv.CTen(t)).t.sum(), (input,), atol=1e-2, rtol=0.01)
+class CrossConvTests(unittest.TestCase):
+    def test_streams(self):
+        cconv = conv.CrossConv((1, 2), (3, 1), 4, pad=True)
+        n, h, w = 3, 40, 40
+        input = [
+            torch.randn(n, 1, h, w, 2),
+            torch.randn(n, 2, h, w, 2)
+        ]
+
+        out1, out2 = cconv(*input)
+
+        self.assertEqual(out1.shape, (n, 3, h, w, 2))
+        self.assertEqual(out2.shape, (n, 1, h, w, 2))
 
 unittest.main()
