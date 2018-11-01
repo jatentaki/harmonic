@@ -55,8 +55,12 @@ class Weights(nn.Module):
         self.radius = radius
         self.diam = 2 * self.radius + 1
 
-        self.r = torch.randn(self.total_channels, radius + 1, requires_grad=True)
-        self.betas = torch.randn(self.total_channels, 1, 1, requires_grad=True)
+        self.r = nn.Parameter(
+            torch.randn(self.total_channels, radius + 1, requires_grad=True)
+        )
+        self.betas = nn.Parameter(
+            torch.randn(self.total_channels, 1, 1, requires_grad=True)
+        )
 
         self.precompute_bilinear()
         self.precompute_angles()
@@ -113,10 +117,14 @@ class Weights(nn.Module):
     def radial(self) -> ['f', 'd', 'd']:
         # pad radial function with 0 so that we can redirect out of bounds
         # accesses there
-        r_ = torch.cat([self.r, torch.zeros(self.total_channels, 1)], dim=1)
+        r_ = torch.cat([
+            self.r,
+            torch.zeros(self.total_channels, 1, device=self.r.device)
+        ], dim=1)
 
         rf = r_[:, self.floor]
         rc = r_[:, self.ceil]
+
         return self.alpha * rc + (1 - self.alpha) * rf
 
 

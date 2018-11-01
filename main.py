@@ -16,19 +16,28 @@ test_y = test_y.long()
 
 layout = [
     (1, ),
-    (5, 5, 5),
-    (3, 5, 5),
+    (3, 5, 3),
+    (3, 5, 3),
     (10, ),
 ]
 
 net = HNet(4, layout=layout)
+loss_fn = nn.CrossEntropyLoss()
+
+if torch.cuda.is_available():
+    net = net.cuda()
+    loss_fn = loss_fn.cuda()
+    train_x = train_x.cuda()
+    test_x = test_x.cuda()
+    train_y = train_y.cuda()
+    test_y = test_y.cuda()
+
 n_params = 0
 for param in net.parameters():
     n_params += param.numel()
 print('n params:', n_params)
 
-loss_fn = nn.CrossEntropyLoss()
-optim = torch.optim.SGD(net.parameters(), lr=0.01)
+optim = torch.optim.SGD(net.parameters(), lr=1e-4)
 
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
@@ -46,13 +55,19 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
+# normalize
+mean = 0.13
+std = 0.3
+train_x = (train_x - mean) / std
+test_x = (test_x - mean) / std
+
 train_ixs = torch.arange(10000)
 test_ixs = torch.arange(2000)
 
 n_epochs = 20
-batch_size = 100
-n_train = 250
-n_test = 100
+batch_size = 250
+n_train = 10000
+n_test = 2000
 
 for epoch in range(n_epochs):
     random.shuffle(train_ixs)
@@ -62,9 +77,9 @@ for epoch in range(n_epochs):
         predictions = maps.sum(dim=(2, 3))
         optim.zero_grad()
         loss = loss_fn(predictions, train_y[sample, ...])
-        print('Loss', loss.item())
+        acc = accuracy(predictions, train_y[sample, ...])
+        print('Loss', loss.item(), 'accuracy', acc[0].item(), 'out of', sample.shape[0])
         loss.backward()
-        print(predictions.grad)
         optim.step()
 
     random.shuffle(test_ixs)
