@@ -1,4 +1,4 @@
-import torch, random
+import torch, random, imageio
 import torch.nn as nn
 import numpy as np
 from hnet import HNet
@@ -21,7 +21,7 @@ layout = [
     (10, ),
 ]
 
-net = HNet(4, layout=layout)
+net = HNet(3, layout=layout)
 loss_fn = nn.CrossEntropyLoss()
 
 if torch.cuda.is_available():
@@ -58,8 +58,15 @@ def accuracy(output, target, topk=(1,)):
 # normalize
 mean = 0.13
 std = 0.3
-train_x = (train_x - mean) / std
-test_x = (test_x - mean) / std
+
+def normalize(x):
+    return (x - mean) / std
+
+train_x = normalize(train_x)
+test_x = normalize(test_x)
+
+def unnormalize(x):
+    return x * std + mean
 
 train_ixs = torch.arange(10000)
 test_ixs = torch.arange(2000)
@@ -85,7 +92,17 @@ for epoch in range(n_epochs):
     random.shuffle(test_ixs)
     for batch in range(n_test // batch_size):
         sample = test_ixs[batch_size*batch:batch_size*(batch+1)]
-        maps = net(test_x[sample, ...])
+        y = test_y[sample, ...]
+        x = test_x[sample, ...]
+
+        maps = net(x)
         predictions = maps.sum(dim=(2, 3))
-        acc = accuracy(predictions, test_y[sample, ...])
+        acc = accuracy(predictions, y)
         print('accuracy', acc[0].item(), 'out of', sample.shape[0])
+        img = x[0, 0, ...].detach().numpy()
+        _, pred = predictions[0].topk(1)
+
+        imageio.imsave(
+            'img_{}_{}_{}.png'.format(epoch, batch, pred.item()),
+            (unnormalize(img) * 255).astype(np.uint8)
+        )

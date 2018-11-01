@@ -1,25 +1,6 @@
 import torch, unittest
 import conv
 
-class WeightsTests(unittest.TestCase):
-    def test_radial(self):
-        f_in, f_out = 2, 3
-        rad = 5
-        diam = 2 * rad + 1
-
-        weights = conv.Weights(f_in, f_out, rad, 0)
-
-        xs = torch.linspace(-rad, rad, diam).reshape(-1, 1)
-        ys = xs.reshape(1, -1)
-        rs = torch.sqrt(xs ** 2 + ys ** 2).reshape(1, diam, diam)
-
-        expected = torch.ones_like(rs)
-        expected[rs > rad] = 0
-
-        result = weights.radial()
-        self.assertTrue(torch.allclose(result, expected))
-
-
 class HConvTests(unittest.TestCase):
     def test_no_crash(self):
         hconv = conv.HConv(5, 10, 5, 2, pad=False)
