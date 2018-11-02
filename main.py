@@ -1,18 +1,22 @@
-import torch, random, imageio
+import torch, random, imageio, os
 import torch.nn as nn
+import torchvision.transforms as T
 import numpy as np
 from hnet import HNet
+from loader import Rotmnist
 
-train = np.load('rotmnist/rotated_train.npz')
-test = np.load('rotmnist/rotated_test.npz')
+mean = 0.13
+std = 0.3
 
-train_x, train_y = torch.from_numpy(train['x']), torch.from_numpy(train['y'])
-test_x, test_y = torch.from_numpy(test['x']), torch.from_numpy(test['y'])
+train_loader = torch.utils.data.DataLoader(
+    Rotmnist('rotmnist/rotated_train.npz', transform=T.Normalize((mean, ), (std, ))),
+    batch_size=250, shuffle=True
+)
 
-train_x = train_x.reshape(-1, 1, 28, 28)
-test_x = test_x.reshape(-1, 1, 28, 28)
-train_y = train_y.long()
-test_y = test_y.long()
+test_loader = torch.utils.data.DataLoader(
+    Rotmnist('rotmnist/rotated_test.npz', transform=T.Normalize((mean, ), (std, ))),
+    batch_size=1000, shuffle=False
+)
 
 layout = [
     (1, ),
@@ -24,20 +28,17 @@ layout = [
 net = HNet(3, layout=layout)
 loss_fn = nn.CrossEntropyLoss()
 
-if torch.cuda.is_available():
+cuda = torch.cuda.is_available()
+if cuda:
     net = net.cuda()
     loss_fn = loss_fn.cuda()
-    train_x = train_x.cuda()
-    test_x = test_x.cuda()
-    train_y = train_y.cuda()
-    test_y = test_y.cuda()
 
 n_params = 0
 for param in net.parameters():
     n_params += param.numel()
 print('n params:', n_params)
 
-optim = torch.optim.SGD(net.parameters(), lr=1e-4)
+optim = torch.optim.Adam(net.parameters())
 
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
@@ -55,16 +56,6 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
-# normalize
-mean = 0.13
-std = 0.3
-
-def normalize(x):
-    return (x - mean) / std
-
-train_x = normalize(train_x)
-test_x = normalize(test_x)
-
 def unnormalize(x):
     return x * std + mean
 
@@ -72,37 +63,51 @@ train_ixs = torch.arange(10000)
 test_ixs = torch.arange(2000)
 
 n_epochs = 20
-batch_size = 250
-n_train = 10000
-n_test = 2000
 
+savedir = 'saves/'
+save_nr = 0
+
+def save_one(x, predictions, epoch, batch, prefix=''):
+    global save_nr
+    img = x[0, 0, ...].detach().cpu().numpy()
+    _, pred = predictions[0].topk(1)
+
+    path = savedir + '/{}/e{}/'.format(prefix, epoch)
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    fname = path + 'p{}_{}.png'.format(pred.item(), save_nr)
+    imageio.imsave(
+        fname,
+        (unnormalize(img) * 255).astype(np.uint8)
+    )
+
+    save_nr += 1
+    
 for epoch in range(n_epochs):
-    random.shuffle(train_ixs)
-    for batch in range(n_train // batch_size):
-        sample = train_ixs[batch_size*batch:batch_size*(batch+1)]
-        maps = net(train_x[sample, ...])
-        predictions = maps.sum(dim=(2, 3))
-        optim.zero_grad()
-        loss = loss_fn(predictions, train_y[sample, ...])
-        acc = accuracy(predictions, train_y[sample, ...])
-        print('Loss', loss.item(), 'accuracy', acc[0].item(), 'out of', sample.shape[0])
-        loss.backward()
-        optim.step()
-
-    random.shuffle(test_ixs)
-    for batch in range(n_test // batch_size):
-        sample = test_ixs[batch_size*batch:batch_size*(batch+1)]
-        y = test_y[sample, ...]
-        x = test_x[sample, ...]
+    for i, (x, y) in enumerate(train_loader):
+        if cuda:
+            x, y = x.cuda(), y.cuda()
 
         maps = net(x)
         predictions = maps.sum(dim=(2, 3))
+        optim.zero_grad()
+        loss = loss_fn(predictions, y)
         acc = accuracy(predictions, y)
-        print('accuracy', acc[0].item(), 'out of', sample.shape[0])
-        img = x[0, 0, ...].detach().numpy()
-        _, pred = predictions[0].topk(1)
+        fmt = 'Train\tLoss: {:.2f}\tAccuracy {:.2f} out of {}'
+        print(fmt.format(loss.item(), acc[0].item(), y.shape[0]))
+        loss.backward()
+        optim.step()
+        save_one(x, predictions, epoch, i, prefix='train')
 
-        imageio.imsave(
-            'img_{}_{}_{}.png'.format(epoch, batch, pred.item()),
-            (unnormalize(img) * 255).astype(np.uint8)
-        )
+    with torch.no_grad():
+        for i, (x, y) in enumerate(test_loader):
+            if cuda:
+                x, y = x.cuda(), y.cuda()
+
+            maps = net(x)
+            predictions = maps.sum(dim=(2, 3))
+            acc = accuracy(predictions, y)
+            fmt = 'Test\tAccuracy {:.2f} out of {}'
+            print(fmt.format(acc[0].item(), y.shape[0]))
+            save_one(x, predictions, epoch, i, prefix='test')
