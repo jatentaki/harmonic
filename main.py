@@ -8,6 +8,7 @@ from tqdm import tqdm
 from hnet import HNet
 from loader import Rotmnist
 from utils import AvgMeter
+from cmplx import magnitude
 
 mean = 0.13
 std = 0.3
@@ -21,7 +22,7 @@ train_loader = torch.utils.data.DataLoader(
             T.ToTensor(),
             normalize
         ])),
-    batch_size=1000, shuffle=True, num_workers=1
+    batch_size=250, shuffle=True, num_workers=1
 )
 
 #train_loader = torch.utils.data.DataLoader(
@@ -111,7 +112,7 @@ for epoch in range(n_epochs):
                 x, y = x.cuda(), y.cuda()
 
             maps = net(x)
-            predictions = maps.sum(dim=(2, 3))
+            predictions = magnitude(maps.sum(dim=(2, 3)))
             optim.zero_grad()
             loss = loss_fn(predictions, y)
             acc = accuracy(predictions, y)
@@ -131,7 +132,7 @@ for epoch in range(n_epochs):
                 x, y = x.cuda(), y.cuda()
 
             maps = net(x)
-            predictions = maps.sum(dim=(2, 3))
+            predictions = magnitude(maps.sum(dim=(2, 3)))
             acc = accuracy(predictions, y)
             progress.update(1)
             mean_acc.update(acc[0].item())
