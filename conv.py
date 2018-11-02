@@ -62,29 +62,36 @@ class Weights(nn.Module):
             torch.randn(self.total_channels, 1, 1, requires_grad=True)
         )
 
-        self.precompute_bilinear()
+        self.precompute_gaussian()
         self.precompute_angles()
         if initialize:
             self.initialize_weights()
 
     
-    def precompute_bilinear(self):
+    def precompute_gaussian(self, sigma=0.5):
+        '''
+            Build a [self.diam, self.diam, self.radius + 1] matrix which interpolates
+            the radial function onto the square convolution kernel by means
+            of Gaussian interpolation
+        '''
+
         # compute radii on grid
         xs = torch.linspace(-self.radius, self.radius, self.diam)
         xs = xs.reshape(1, -1)
         ys = xs.reshape(-1, 1)
         rs = torch.sqrt(xs ** 2 + ys ** 2)
 
-        # compute floor, ceil and alpha for bilinear interpolation
-        floor = torch.floor(rs)
-        self.register_buffer('alpha', (rs - floor).reshape(1, self.diam, self.diam))
-        self.register_buffer('floor', floor.to(torch.int64))
-        self.register_buffer('ceil', torch.ceil(rs).to(torch.int64))
+        # compute a radial distance matrix between each grid point
+        # and each radial function element
+        radial = torch.arange(self.radius + 1, dtype=self.r.dtype, device=self.r.device)
+        dist = rs.reshape(self.diam, self.diam, 1) - radial.reshape(1, 1, -1)
 
-        # in `radial` we extend the radial function with a 0 at the end such that we
-        # can redirect out of bounds accesses there. Here we do it
-        self.ceil[self.ceil > self.radius] = self.radius + 1
-        self.floor[self.ceil > self.radius] = self.radius + 1
+        # evaluate Gaussian function on distances
+        gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2))
+        gauss = gauss / gauss.sum(dim=(0, 1), keepdim=True)
+
+        # self-assign the interpolation weights
+        self.register_buffer('gauss', gauss)
 
 
     def precompute_angles(self):
@@ -114,26 +121,15 @@ class Weights(nn.Module):
         return complex(real, imag)
 
     @dimchecked
-    def radial(self) -> ['f', 'd', 'd']:
-        # pad radial function with 0 so that we can redirect out of bounds
-        # accesses there
-        r_ = torch.cat([
-            self.r,
-            torch.zeros(self.total_channels, 1, device=self.r.device)
-        ], dim=1)
-
-        rf = r_[:, self.floor]
-        rc = r_[:, self.ceil]
-
-        return self.alpha * rc + (1 - self.alpha) * rf
-
+    def radial(self, rs: ['f', 'r'], gauss: ['d', 'd', 'r']) -> ['f', 'd', 'd']:
+        return torch.einsum('fr,der->fde', (rs, gauss))
 
     def lowpass(self, w):
         return w #TODO: actual filtering
 
     @dimchecked
     def synthesize(self) -> ['f_out', 'f_in', 'r', 'r', 2]:
-        radial = self.radial().unsqueeze(-1)
+        radial = self.radial(self.r, self.gauss).unsqueeze(-1)
         harmonics = self.harmonics()
 
         kernel = self.lowpass(radial * harmonics)
