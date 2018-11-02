@@ -137,3 +137,5 @@ for epoch in range(n_epochs):
             mean_acc.update(acc[0].item())
             progress.set_postfix(accuracy=mean_acc.avg)
             save_one(x, predictions, epoch, i, prefix='test')
+
+    torch.save({'model': net.state_dict()}, 'e{}.pth.tar'.format(epoch))
