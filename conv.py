@@ -59,7 +59,7 @@ class Weights(nn.Module):
             torch.randn(self.total_channels, radius + 1, requires_grad=True)
         )
         self.betas = nn.Parameter(
-            torch.randn(self.total_channels, 1, 1, requires_grad=True)
+            torch.randn(self.total_channels, radius + 1, requires_grad=True)
         )
 
         self.precompute_gaussian()
@@ -115,8 +115,10 @@ class Weights(nn.Module):
 
     @dimchecked
     def harmonics(self) -> ['f', 'd', 'd', 2]:
-        real = torch.cos(self.order * self.angles + self.betas)
-        imag = torch.sin(self.order * self.angles + self.betas)
+        betas = torch.einsum('fr,der->fde', (self.betas, self.gauss))
+
+        real = torch.cos(self.order * self.angles + betas)
+        imag = torch.sin(self.order * self.angles + betas)
 
         return complex(real, imag)
 
