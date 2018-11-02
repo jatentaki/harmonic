@@ -18,6 +18,6 @@ class Rotmnist(torch.utils.data.DataLoader):
         return self.y.shape[0]
 
     def __getitem__(self, ix):
-        x, y = self.x[ix], self.y[ix]
+        x, y = self.x[ix].clone(), self.y[ix].clone()
 
         return self.transform(x), y

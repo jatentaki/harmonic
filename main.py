@@ -1,27 +1,44 @@
 import torch, random, imageio, os
 import torch.nn as nn
+import torchvision as tv
 import torchvision.transforms as T
 import numpy as np
+from tqdm import tqdm
+
 from hnet import HNet
 from loader import Rotmnist
+from utils import AvgMeter
 
 mean = 0.13
 std = 0.3
 
+normalize = T.Normalize((0.1307,), (0.3081,))
+
 train_loader = torch.utils.data.DataLoader(
-    Rotmnist('rotmnist/rotated_train.npz', transform=T.Normalize((mean, ), (std, ))),
-    batch_size=250, shuffle=True
+    tv.datasets.MNIST(
+        '../data', train=True, download=True,
+        transform=T.Compose([
+            T.ToTensor(),
+            normalize
+        ])),
+    batch_size=1000, shuffle=True, num_workers=1
 )
 
+#train_loader = torch.utils.data.DataLoader(
+#    Rotmnist('rotmnist/mnist.npz', transform=T.Normalize((mean, ), (std, ))),
+#    batch_size=250, shuffle=True
+#)
+
 test_loader = torch.utils.data.DataLoader(
-    Rotmnist('rotmnist/rotated_test.npz', transform=T.Normalize((mean, ), (std, ))),
+    Rotmnist('rotmnist/rotated_test.npz', transform=normalize),
     batch_size=1000, shuffle=False
 )
 
 layout = [
     (1, ),
-    (3, 5, 3),
-    (3, 5, 3),
+    (5, 5, 5),
+    (5, 5, 5),
+    (5, 5, 5),
     (10, ),
 ]
 
@@ -85,29 +102,38 @@ def save_one(x, predictions, epoch, batch, prefix=''):
     save_nr += 1
     
 for epoch in range(n_epochs):
-    for i, (x, y) in enumerate(train_loader):
-        if cuda:
-            x, y = x.cuda(), y.cuda()
+    with tqdm(total=len(train_loader), dynamic_ncols=True) as progress:
+        mean_loss = AvgMeter()
+        mean_acc = AvgMeter()
+        for i, (x, y) in enumerate(train_loader):
+            x, y = x.clone(), y.clone()
+            if cuda:
+                x, y = x.cuda(), y.cuda()
 
-        maps = net(x)
-        predictions = maps.sum(dim=(2, 3))
-        optim.zero_grad()
-        loss = loss_fn(predictions, y)
-        acc = accuracy(predictions, y)
-        fmt = 'Train\tLoss: {:.2f}\tAccuracy {:.2f} out of {}'
-        print(fmt.format(loss.item(), acc[0].item(), y.shape[0]))
-        loss.backward()
-        optim.step()
-        save_one(x, predictions, epoch, i, prefix='train')
+            maps = net(x)
+            predictions = maps.sum(dim=(2, 3))
+            optim.zero_grad()
+            loss = loss_fn(predictions, y)
+            acc = accuracy(predictions, y)
+            loss.backward()
+            optim.step()
+            progress.update(1)
+            mean_loss.update(loss.item())
+            mean_acc.update(acc[0].item())
+            progress.set_postfix(loss=mean_loss.avg, accuracy=mean_acc.avg)
+            save_one(x, predictions, epoch, i, prefix='train')
 
-    with torch.no_grad():
+    with torch.no_grad(), tqdm(total=len(test_loader), dynamic_ncols=True) as progress:
+        mean_acc = AvgMeter()
         for i, (x, y) in enumerate(test_loader):
+            x, y = x.clone(), y.clone()
             if cuda:
                 x, y = x.cuda(), y.cuda()
 
             maps = net(x)
             predictions = maps.sum(dim=(2, 3))
             acc = accuracy(predictions, y)
-            fmt = 'Test\tAccuracy {:.2f} out of {}'
-            print(fmt.format(acc[0].item(), y.shape[0]))
+            progress.update(1)
+            mean_acc.update(acc[0].item())
+            progress.set_postfix(accuracy=mean_acc.avg)
             save_one(x, predictions, epoch, i, prefix='test')
