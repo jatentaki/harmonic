@@ -51,11 +51,11 @@ class HNet(nn.Module):
         
 
     @dimchecked
-    def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', -1, 'wo', 'ho']:
+    def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', -1, 'wo', 'ho', 2]:
         x_cmplx = torch.stack([x, torch.zeros_like(x)], dim=-1)
         
         y_cmplx = (x_cmplx, )
         for block in self.seq:
             y_cmplx = block(*y_cmplx)
 
-        return y_cmplx[0][..., 0]
+        return y_cmplx[0]
