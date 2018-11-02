@@ -4,18 +4,12 @@ from utils import rot90
 from cmplx import magnitude
 
 class HConvTests(unittest.TestCase):
-    def test_no_crash(self):
-        hconv = HConv(5, 10, 5, 2, pad=False)
-        
-        input = torch.randn(2, 5, 20, 20, 2, requires_grad=True)
-        output = hconv(input)
-
     def test_equivariance(self):
-        b, r, c1, c2, h, w = 5, 5, 5, 10, 30, 30
-        conv1 = HConv(c1, c2, r, 2)
-        conv2 = HConv(c2, c1, r, -2)
+        b, r, c1, c2, h, w = 5, 7, 5, 10, 30, 30
+        conv1 = HConv(c1, c2, r, 2).double()
+        conv2 = HConv(c2, c1, r, -2).double()
 
-        inp = torch.randn(b, c1, h, w, 2)
+        inp = torch.randn(b, c1, h, w, 2, dtype=torch.float64)
         rot = rot90(inp)
 
         base_fwd = conv2(conv1(inp))
@@ -27,7 +21,8 @@ class HConvTests(unittest.TestCase):
 
 class CrossConvTests(unittest.TestCase):
     def test_streams(self):
-        cconv = CrossConv((1, 2), (3, 1), 4, pad=True)
+        r = 7
+        cconv = CrossConv((1, 2), (3, 1), r, pad=True)
         n, h, w = 3, 40, 40
         input = [
             torch.randn(n, 1, h, w, 2),

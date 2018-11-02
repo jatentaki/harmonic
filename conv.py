@@ -26,16 +26,19 @@ def h_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
 
 @localized_module
 class HConv(nn.Module):
-    def __init__(self, in_channels, out_channels, radius, order, pad=False):
+    def __init__(self, in_channels, out_channels, size, order,
+                 radius=None, pad=False):
         super(HConv, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.radius = radius
+        self.size = size
         self.order = order
+
+        self.radius = radius if radius is not None else size / 2 - 1
         self.pad = pad
 
-        self.weights = Weights(in_channels, out_channels, radius, order)
+        self.weights = Weights(in_channels, out_channels, size, self.radius, order)
 
     @dimchecked
     def forward(self, t: ['b', 'fi', 'hi', 'wi', 2]) -> ['b', 'fo', 'ho', 'wo', 2]:
@@ -45,21 +48,26 @@ class HConv(nn.Module):
 
 
 class Weights(nn.Module):
-    def __init__(self, in_channels, out_channels, radius, order, initialize=True):
+    def __init__(self, in_channels, out_channels, size, radius, order,
+                 initialize=True):
+
         super(Weights, self).__init__()
 
-        self.order = order
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.total_channels = in_channels * out_channels
+        self.size = size
         self.radius = radius
-        self.diam = 2 * self.radius + 1
+        self.order = order
+
+        self.total_channels = in_channels * out_channels
+        self.n_weights = int(math.ceil(self.radius)) + 2
+        self.middle = size / 2
 
         self.r = nn.Parameter(
-            torch.randn(self.total_channels, radius + 1, requires_grad=True)
+            torch.randn(self.total_channels, self.n_weights, requires_grad=True)
         )
         self.betas = nn.Parameter(
-            torch.randn(self.total_channels, radius + 1, requires_grad=True)
+            torch.randn(self.total_channels, self.n_weights, requires_grad=True)
         )
 
         self.precompute_gaussian()
@@ -70,21 +78,24 @@ class Weights(nn.Module):
     
     def precompute_gaussian(self, sigma=0.5):
         '''
-            Build a [self.diam, self.diam, self.radius + 1] matrix which interpolates
+            Build a [self.diam, self.diam, self.n_weights] matrix which interpolates
             the radial function onto the square convolution kernel by means
             of Gaussian interpolation
         '''
 
         # compute radii on grid
-        xs = torch.linspace(-self.radius, self.radius, self.diam)
+        xs = torch.arange(self.size, dtype=torch.float32) - self.middle + 0.5
         xs = xs.reshape(1, -1)
         ys = xs.reshape(-1, 1)
         rs = torch.sqrt(xs ** 2 + ys ** 2)
 
         # compute a radial distance matrix between each grid point
         # and each radial function element
-        radial = torch.arange(self.radius + 1, dtype=self.r.dtype, device=self.r.device)
-        dist = rs.reshape(self.diam, self.diam, 1) - radial.reshape(1, 1, -1)
+        weight_positions = torch.linspace(
+            0, self.radius, self.n_weights,
+            dtype=self.r.dtype, device=self.r.device
+        )
+        dist = rs.unsqueeze(2) - weight_positions.reshape(1, 1, -1)
 
         # evaluate Gaussian function on distances
         gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2))
@@ -96,7 +107,7 @@ class Weights(nn.Module):
 
     def precompute_angles(self):
         # compute angles on grid
-        xs = torch.linspace(-1, 1, self.diam)
+        xs = torch.linspace(-1, 1, self.size)
         xs = xs.reshape(1, -1)
         ys = xs.reshape(-1, 1)
         self.register_buffer('angles', torch.atan2(xs, ys).unsqueeze(0))
@@ -107,7 +118,7 @@ class Weights(nn.Module):
         # is as well in N(0, 1). This means each weight should also be from
         # Gaussian with mean 0 and sigma = 2 / sqrt(n_contributing_pixels).
         
-        n_contributing = self.total_channels * self.diam ** 2
+        n_contributing = self.total_channels * self.size ** 2
         std = 2. / math.sqrt(n_contributing)
         nn.init.normal_(self.r, mean=0, std=std)
         nn.init.uniform_(self.betas, 0, 2 * 3.14)
@@ -126,17 +137,14 @@ class Weights(nn.Module):
     def radial(self, rs: ['f', 'r'], gauss: ['d', 'd', 'r']) -> ['f', 'd', 'd']:
         return torch.einsum('fr,der->fde', (rs, gauss))
 
-    def lowpass(self, w):
-        return w #TODO: actual filtering
-
     @dimchecked
     def synthesize(self) -> ['f_out', 'f_in', 'r', 'r', 2]:
         radial = self.radial(self.r, self.gauss).unsqueeze(-1)
         harmonics = self.harmonics()
 
-        kernel = self.lowpass(radial * harmonics)
+        kernel = radial * harmonics
         kernel = kernel.reshape(
-            self.out_channels, self.in_channels, self.diam, self.diam, 2
+            self.out_channels, self.in_channels, self.size, self.size, 2
         )
 
         return kernel
@@ -144,6 +152,7 @@ class Weights(nn.Module):
 
 def ords2s(in_ord, out_ord):
     return '{}_{}'.format(in_ord, out_ord)
+
 
 class CrossConv(nn.Module):
     def __init__(self, in_repr, out_repr, radius, pad=False):
