@@ -22,11 +22,11 @@ class HConvTests(unittest.TestCase):
 class CrossConvTests(unittest.TestCase):
     def test_streams(self):
         r = 7
-        cconv = CrossConv((1, 2), (3, 1), r, pad=True)
+        cconv = CrossConv((1, 2), (3, 1), r, pad=True).double()
         n, h, w = 3, 40, 40
         input = [
-            torch.randn(n, 1, h, w, 2),
-            torch.randn(n, 2, h, w, 2)
+            torch.randn(n, 1, h, w, 2, dtype=torch.float64),
+            torch.randn(n, 2, h, w, 2, dtype=torch.float64)
         ]
 
         out1, out2 = cconv(*input)
@@ -40,10 +40,10 @@ class CrossConvTests(unittest.TestCase):
         rep1 = (2, )
         rep2 = (3, 3, 3)
 
-        cconv1 = CrossConv(rep1, rep2, r)
-        cconv2 = CrossConv(rep2, rep1, r)
+        cconv1 = CrossConv(rep1, rep2, r).double()
+        cconv2 = CrossConv(rep2, rep1, r).double()
 
-        inp = torch.randn(b, rep1[0], h, w, 2)
+        inp = torch.randn(b, rep1[0], h, w, 2, dtype=torch.float64)
         rot = rot90(inp)
 
         base_fwd = cconv2(*cconv1(inp))

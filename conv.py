@@ -35,7 +35,7 @@ class HConv(nn.Module):
         self.size = size
         self.order = order
 
-        self.radius = radius if radius is not None else size / 2 - 1
+        self.radius = radius if radius is not None else size / 2 - 2
         self.pad = pad
 
         self.weights = Weights(in_channels, out_channels, size, self.radius, order)
@@ -125,21 +125,37 @@ class Weights(nn.Module):
 
 
     @dimchecked
+    def gaussian_interp(self, f: ['f', 'r']) -> ['f', 'd', 'd']:
+        '''
+            Interpolate a radial function `f` onto 2d kernels by Gaussian interpolation
+            (interpolation matrix precomputed in `precompute_gaussian`
+        '''
+        # d == e, einsum syntax doesn't allow expressing that
+        return torch.einsum('fr,der->fde', (f, self.gauss))
+
+
+    @dimchecked
     def harmonics(self) -> ['f', 'd', 'd', 2]:
-        betas = torch.einsum('fr,der->fde', (self.betas, self.gauss))
+        betas = self.gaussian_interp(self.betas)
 
         real = torch.cos(self.order * self.angles + betas)
         imag = torch.sin(self.order * self.angles + betas)
 
         return complex(real, imag)
 
+
     @dimchecked
-    def radial(self, rs: ['f', 'r'], gauss: ['d', 'd', 'r']) -> ['f', 'd', 'd']:
-        return torch.einsum('fr,der->fde', (rs, gauss))
+    def radial(self) -> ['f', 'd', 'd']:
+        return self.gaussian_interp(self.r)
+
 
     @dimchecked
     def synthesize(self) -> ['f_out', 'f_in', 'r', 'r', 2]:
-        radial = self.radial(self.r, self.gauss).unsqueeze(-1)
+#        import matplotlib.pyplot as plt
+#        for i in range(self.gauss.shape[2]):
+#            plt.imshow(self.gauss.numpy()[..., i])
+#            plt.show()
+        radial = self.radial().unsqueeze(-1)
         harmonics = self.harmonics()
 
         kernel = radial * harmonics

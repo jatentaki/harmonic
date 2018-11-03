@@ -43,7 +43,7 @@ layout = [
     (10, ),
 ]
 
-net = HNet(3, layout=layout)
+net = HNet(5, layout=layout)
 loss_fn = nn.CrossEntropyLoss()
 
 cuda = torch.cuda.is_available()
