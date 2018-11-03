@@ -62,7 +62,6 @@ class Weights(nn.Module):
         self.total_channels = in_channels * out_channels
         self.n_rings = int(math.ceil(self.radius))
         self.n_angles = 12 # FIXME: figure out he right number
-        self.middle = size / 2
 
         self.r = nn.Parameter(
             torch.randn(self.total_channels, self.n_rings, requires_grad=True)
@@ -80,7 +79,9 @@ class Weights(nn.Module):
 
     
     def precompute_grid(self):
-        angles = torch.linspace(0, 2 * math.pi, self.n_angles)
+        # note: we need to sample angles in [0, 2*pi) thus we take 1 more
+        # sample than necessary and discard it
+        angles = torch.linspace(0, 2 * math.pi, self.n_angles + 1)[:-1]
         radii = torch.linspace(0, self.size / 2, self.n_rings)
     
         self.register_buffer('angles', angles)
@@ -98,7 +99,7 @@ class Weights(nn.Module):
         # compute cartesian coordinates of each polar grid point
         p_xs = self.radii.unsqueeze(1) * torch.cos(self.angles).unsqueeze(0)
         p_ys = self.radii.unsqueeze(1) * torch.sin(self.angles).unsqueeze(0)
-        
+
         # compute cartesian coordinates of each cartesian grid point
         c_xs = torch.linspace(-self.size/2, self.size/2, self.size)
         c_ys = c_xs
@@ -161,10 +162,6 @@ class Weights(nn.Module):
 
     @dimchecked
     def synthesize(self) -> ['f_out', 'f_in', 'r', 'r', 2]:
-#        import matplotlib.pyplot as plt
-#        for i in range(self.gauss.shape[2]):
-#            plt.imshow(self.gauss.numpy()[..., i])
-#            plt.show()
 
         kernel = self.cartesian_harmonics().reshape(
             self.out_channels, self.in_channels, self.size, self.size, 2
