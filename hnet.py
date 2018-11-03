@@ -1,10 +1,13 @@
 import torch
 import torch.nn as nn
+
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked
+
 from conv import CrossConv
 from nonl import ScalarGate
 from pooling import avg_pool2d
+from bnorm import MultiBNorm
 
 
 hnet_default_layout = [
@@ -24,12 +27,14 @@ class HNetBlock(nn.Module):
         self.first_nonl = first_nonl
 
         if first_nonl:
+            self.bnorm = MultiBNorm(self.in_repr)
             self.nonl = ScalarGate(in_repr)
         self.conv = CrossConv(in_repr, out_repr, radius, pad=pad)
 
     def forward(self, *x):
         y = x
         if self.first_nonl:
+            y = self.bnorm(*y)
             y = self.nonl(*y)
         y = self.conv(*y)
 

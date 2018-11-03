@@ -1,10 +1,54 @@
 import torch
 import torch.nn as nn
 
+from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 
 from cmplx import magnitude
 
+class MultiBNorm(nn.Module):
+    def __init__(self, repr, momentum=0.1, eps=1e-5):
+        super(MultiBNorm, self).__init__()
+
+        self.repr = repr
+        self.subnorms = nn.ModuleList()
+
+        for i, mult in enumerate(repr):
+            if mult == 0:
+                bnorm = None
+            else:
+                name = 'bn2d_{}'.format(i)
+                bnorm = BatchNorm2d(mult, momentum=momentum, eps=eps, name=name)
+
+            self.subnorms.append(bnorm)
+
+    def forward(self, *streams):
+        if len(streams) != len(self.repr):
+            fmt = "Based on repr {} expected {} streams, got {}"
+            msg = fmt.format(self.repr, len(self.repr), len(streams))
+            raise ValueError(msg)
+
+        out_streams = []
+        for i, (stream, bnorm) in enumerate(zip(streams, self.subnorms)):
+            if stream is None and bnorm is not None:
+                fmt = "Stream {} has no channels, but was expected to have {}"
+                msg = fmt.format(i, self.repr[i])
+                raise ValueError(msg)
+            
+            if stream is not None and bnorm is None:
+                fmt = "Stream {} has {} channels, but was expected to have none"
+                msg = fmt.format(i, stream.shape[1])
+                raise ValueError(msg)
+
+            if stream is None:
+                out_streams.append(None)
+            else:
+                out_streams.append(bnorm(stream))
+
+        return out_streams
+
+
+@localized_module
 class BatchNorm2d(nn.Module):
     def __init__(self, num_features, momentum=0.1, eps=1e-5):
         super(BatchNorm2d, self).__init__()

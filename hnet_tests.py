@@ -4,9 +4,6 @@ from cmplx import magnitude
 from utils import rot90
 
 class HNetTests(unittest.TestCase):
-    def test_instantiation(self):
-        hnet = HNet(5)
-
     def test_equivariance(self):
         hnet = HNet(5)
         inp = torch.randn(7, 1, 60, 60)
