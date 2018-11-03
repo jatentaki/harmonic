@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked, ShapeChecker
 
-from cmplx import complex
+from cmplx import cmplx 
 
 @dimchecked
 def complex_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
@@ -22,7 +22,7 @@ def complex_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
     imag = F.conv2d(x[..., 0], w[..., 1], padding=padding) + \
            F.conv2d(x[..., 1], w[..., 0], padding=padding)
 
-    return complex(real, imag)
+    return cmplx(real, imag)
 
 @localized_module
 class HConv(nn.Module):
@@ -149,7 +149,7 @@ class Weights(nn.Module):
         real = real * self.r.unsqueeze(2)
         imag = imag * self.r.unsqueeze(2)
 
-        return complex(real, imag)
+        return cmplx(real, imag)
 
     @dimchecked
     def cartesian_harmonics(self) -> ['f', 'd', 'd', 2]:
@@ -207,7 +207,7 @@ class CrossConv(nn.Module):
             if stream is None:
                 continue
 
-            checker.check(stream, ['n', -1, 'hi', 'wi', 2], name='in_stream {}'.format(i))
+            checker.check(stream, ['n', -1, 'hi', 'wi', 2], name='in_stream{}'.format(i))
 
         out_streams = [(0 if repr != 0 else None) for repr in self.out_repr]
 
@@ -226,6 +226,6 @@ class CrossConv(nn.Module):
             if stream is None:
                 continue
 
-            checker.check(stream, ['n', -1, 'ho', 'wo', 2], name='out_stream {}'.format(i))
+            checker.check(stream, ['n', -1, 'ho', 'wo', 2], name='out_stream{}'.format(i))
 
         return out_streams

@@ -6,5 +6,5 @@ def magnitude(t: [..., 2]) -> [...]:
     return (t ** 2).sum(dim=-1) ** 0.5
 
 @dimchecked
-def complex(imag: [...], real: [...]) -> [..., 2]:
+def cmplx(real: [...], imag: [...]) -> [..., 2]:
     return torch.stack([real, imag], dim=-1)

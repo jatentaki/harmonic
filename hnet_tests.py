@@ -15,7 +15,7 @@ class HNetTests(unittest.TestCase):
         out = hnet(inp)
         out_rot = hnet(inp_rot)
 
-        diff = (magnitude(out) - magnitude(rot90(out_rot, k=3))).max().item()
+        diff = (rot90(out) - out_rot).max().item()
 
         self.assertLess(diff, 1e-3)
 
