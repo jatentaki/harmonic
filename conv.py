@@ -212,7 +212,7 @@ class CrossConv(nn.Module):
         out_streams = [(0 if repr != 0 else None) for repr in self.out_repr]
 
         for in_ord, in_stream in enumerate(streams):
-            if stream is None:
+            if in_stream is None:
                 continue
 
             for out_ord in range(len(out_streams)):
