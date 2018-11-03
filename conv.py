@@ -7,7 +7,7 @@ from torch_dimcheck import dimchecked, ShapeChecker
 from cmplx import complex
 
 @dimchecked
-def h_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
+def complex_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
            w: ['f_out', 'f_in', 'kh', 'kw', 2],
            pad=False) -> ['b', 'f_out', 'oh', 'ow', 2]:
 
@@ -35,7 +35,7 @@ class HConv(nn.Module):
         self.size = size
         self.order = order
 
-        self.radius = radius if radius is not None else size / 2 - 2
+        self.radius = radius if radius is not None else size / 2 - 1
         self.pad = pad
 
         self.weights = Weights(in_channels, out_channels, size, self.radius, order)
@@ -44,7 +44,7 @@ class HConv(nn.Module):
     def forward(self, t: ['b', 'fi', 'hi', 'wi', 2]) -> ['b', 'fo', 'ho', 'wo', 2]:
         kernel = self.weights.synthesize()
 
-        return h_conv(t, kernel, pad=self.pad)
+        return complex_conv(t, kernel, pad=self.pad)
 
 
 class Weights(nn.Module):
@@ -60,59 +60,67 @@ class Weights(nn.Module):
         self.order = order
 
         self.total_channels = in_channels * out_channels
-        self.n_weights = int(math.ceil(self.radius)) + 2
+        self.n_rings = int(math.ceil(self.radius))
+        self.n_angles = 12 # FIXME: figure out he right number
         self.middle = size / 2
 
         self.r = nn.Parameter(
-            torch.randn(self.total_channels, self.n_weights, requires_grad=True)
+            torch.randn(self.total_channels, self.n_rings, requires_grad=True)
         )
         self.betas = nn.Parameter(
-            torch.randn(self.total_channels, self.n_weights, requires_grad=True)
+            torch.randn(self.total_channels, self.n_rings, requires_grad=True)
         )
 
-        self.precompute_gaussian()
-        self.precompute_angles()
+        self.precompute_grid()
+        gauss = self.precompute_gaussian()
+        self.register_buffer('gauss', gauss)
+
         if initialize:
             self.initialize_weights()
 
     
-    def precompute_gaussian(self, sigma=0.5):
+    def precompute_grid(self):
+        angles = torch.linspace(0, 2 * math.pi, self.n_angles)
+        radii = torch.linspace(0, self.size / 2, self.n_rings)
+    
+        self.register_buffer('angles', angles)
+        self.register_buffer('radii', radii)
+    
+
+    @dimchecked
+    def precompute_gaussian(self, sigma=0.5) -> ['d', 'd', 'nw', 'na']:
         '''
-            Build a [self.diam, self.diam, self.n_weights] matrix which interpolates
-            the radial function onto the square convolution kernel by means
-            of Gaussian interpolation
+            Build a [self.size, self.size, self.n_rings, self.n_angles] matrix
+            which interpolates kernel coordinates from radial to Cartesian
+            by means of Gaussian interpolation
         '''
 
-        # compute radii on grid
-        xs = torch.arange(self.size, dtype=torch.float32) - self.middle + 0.5
-        xs = xs.reshape(1, -1)
-        ys = xs.reshape(-1, 1)
-        rs = torch.sqrt(xs ** 2 + ys ** 2)
+        # compute cartesian coordinates of each polar grid point
+        p_xs = self.radii.unsqueeze(1) * torch.cos(self.angles).unsqueeze(0)
+        p_ys = self.radii.unsqueeze(1) * torch.sin(self.angles).unsqueeze(0)
+        
+        # compute cartesian coordinates of each cartesian grid point
+        c_xs = torch.linspace(-self.size/2, self.size/2, self.size)
+        c_ys = c_xs
 
-        # compute a radial distance matrix between each grid point
-        # and each radial function element
-        weight_positions = torch.linspace(
-            0, self.radius, self.n_weights,
-            dtype=self.r.dtype, device=self.r.device
-        )
-        dist = rs.unsqueeze(2) - weight_positions.reshape(1, 1, -1)
+        # compute distances across each cartesian axis of shape
+        # [self.size, self.n_rings, self.n_angles]
+        x_dist = p_xs.unsqueeze(0) - c_xs.reshape(-1, 1, 1)
+        y_dist = p_ys.unsqueeze(0) - c_ys.reshape(-1, 1, 1)
+
+        # compute matrix of distances between gridpoints in both
+        # coordinate systems of shape
+        # [self.size, self.size, self.n_rings, self.n_angles]
+        dist2 = x_dist.pow(2).unsqueeze(0) + y_dist.pow(2).unsqueeze(1)
+        dist = torch.sqrt(dist2)
 
         # evaluate Gaussian function on distances
         gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2))
         gauss = gauss / gauss.sum(dim=(0, 1), keepdim=True)
 
-        # self-assign the interpolation weights
-        self.register_buffer('gauss', gauss)
+        return gauss 
 
 
-    def precompute_angles(self):
-        # compute angles on grid
-        xs = torch.linspace(-1, 1, self.size)
-        xs = xs.reshape(1, -1)
-        ys = xs.reshape(-1, 1)
-        self.register_buffer('angles', torch.atan2(xs, ys).unsqueeze(0))
-    
-    
     def initialize_weights(self):
         # we want to initialize such that assuming input from N(0, 1) the output
         # is as well in N(0, 1). This means each weight should also be from
@@ -121,32 +129,34 @@ class Weights(nn.Module):
         n_contributing = self.total_channels * self.size ** 2
         std = 2. / math.sqrt(n_contributing)
         nn.init.normal_(self.r, mean=0, std=std)
-        nn.init.uniform_(self.betas, 0, 2 * 3.14)
+        nn.init.uniform_(self.betas, 0, 2 * math.pi)
 
 
     @dimchecked
-    def gaussian_interp(self, f: ['f', 'r']) -> ['f', 'd', 'd']:
+    def polar_harmonics(self) -> ['f', 'ring', 'angle', 2]:
         '''
-            Interpolate a radial function `f` onto 2d kernels by Gaussian interpolation
-            (interpolation matrix precomputed in `precompute_gaussian`
+            Synthesize filters in polar coordinates. Grid is given by `angles` and
+            `radii`, parameters by `betas` (phase offset) and `r` (radial profile)
         '''
-        # d == e, einsum syntax doesn't allow expressing that
-        return torch.einsum('fr,der->fde', (f, self.gauss))
+        real = torch.cos(
+            self.order * self.angles.reshape(1, 1, -1) + self.betas.unsqueeze(2)
+        )
+        imag = torch.sin(
+            self.order * self.angles.reshape(1, 1, -1) + self.betas.unsqueeze(2)
+        )
 
-
-    @dimchecked
-    def harmonics(self) -> ['f', 'd', 'd', 2]:
-        betas = self.gaussian_interp(self.betas)
-
-        real = torch.cos(self.order * self.angles + betas)
-        imag = torch.sin(self.order * self.angles + betas)
+        real = real * self.r.unsqueeze(2)
+        imag = imag * self.r.unsqueeze(2)
 
         return complex(real, imag)
 
-
     @dimchecked
-    def radial(self) -> ['f', 'd', 'd']:
-        return self.gaussian_interp(self.r)
+    def cartesian_harmonics(self) -> ['f', 'd', 'd', 2]:
+        '''
+            Interpolate the results of `polar_harmonics()` onto Cartesian grid
+        '''
+        polar_harm = self.polar_harmonics()
+        return torch.einsum('frac,dera->fdec', (polar_harm, self.gauss))
 
 
     @dimchecked
@@ -155,11 +165,8 @@ class Weights(nn.Module):
 #        for i in range(self.gauss.shape[2]):
 #            plt.imshow(self.gauss.numpy()[..., i])
 #            plt.show()
-        radial = self.radial().unsqueeze(-1)
-        harmonics = self.harmonics()
 
-        kernel = radial * harmonics
-        kernel = kernel.reshape(
+        kernel = self.cartesian_harmonics().reshape(
             self.out_channels, self.in_channels, self.size, self.size, 2
         )
 
