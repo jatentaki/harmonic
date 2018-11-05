@@ -4,23 +4,23 @@ import torch.nn.functional as F
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked, ShapeChecker
 
-from .cmplx import cmplx 
+from ..cmplx import cmplx 
 
 @dimchecked
-def complex_conv(x: ['b',     'f_in', 'xh', 'xw', 2],
-           w: ['f_out', 'f_in', 'kh', 'kw', 2],
-           pad=False) -> ['b', 'f_out', 'oh', 'ow', 2]:
+def complex_conv(x: ['b',     'f_in', 'hx', 'wx', 'dx', 2],
+                 w: ['f_out', 'f_in', 'hk', 'wk', 'dk', 2],
+                 pad=False) -> ['b', 'f_out', 'oh', 'ow', 2]:
 
     if pad:
         padding = w.shape[3] // 2
     else:
         padding = 0
 
-    real = F.conv2d(x[..., 0], w[..., 0], padding=padding) - \
-           F.conv2d(x[..., 1], w[..., 1], padding=padding)
+    real = F.conv3d(x[..., 0], w[..., 0], padding=padding) - \
+           F.conv3d(x[..., 1], w[..., 1], padding=padding)
 
-    imag = F.conv2d(x[..., 0], w[..., 1], padding=padding) + \
-           F.conv2d(x[..., 1], w[..., 0], padding=padding)
+    imag = F.conv3d(x[..., 0], w[..., 1], padding=padding) + \
+           F.conv3d(x[..., 1], w[..., 0], padding=padding)
 
     return cmplx(real, imag)
 
