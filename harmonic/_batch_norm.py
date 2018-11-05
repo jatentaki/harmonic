@@ -21,7 +21,9 @@ class _BatchNorm(nn.Module):
                 bnorm = None
             else:
                 name = 'bn{}d_{}'.format(dim, i)
-                bnorm = BatchNorm(mult, momentum=momentum, eps=eps, name=name, dim=dim)
+                bnorm = _StreamBatchNorm(
+                    mult, momentum=momentum, eps=eps, name=name, dim=dim
+                )
 
             self.subnorms.append(bnorm)
 

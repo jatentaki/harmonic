@@ -1,5 +1,5 @@
-from .bnorm import StreamBatchNorm2d
-from .conv import CrossConv as HConv2d
+from .bnorm import BatchNorm2d
+from .conv import HConv2d
 from .nonl import ScalarGate as ScalarGate2d
 from .pooling import avg_pool2d
 

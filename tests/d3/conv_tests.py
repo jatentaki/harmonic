@@ -1,13 +1,13 @@
 import torch, unittest
-from harmonic.d3.conv import HConv, CrossConv
+from harmonic.d3.conv import HConv3d, StreamHConv3d
 from utils import rot90
 from harmonic.cmplx import magnitude
 
-class HConvTests(unittest.TestCase):
+class StreamHConvTests(unittest.TestCase):
     def _diff_rotation(self, order, plane):
         b, r, c1, c2, h, w, d = 3, 5, 3, 8, 20, 20, 20
-        conv1 = HConv(c1, c2, r, order).double()
-        conv2 = HConv(c2, c1, r, -order).double()
+        conv1 = StreamHConv3d(c1, c2, r, order).double()
+        conv2 = StreamHConv3d(c2, c1, r, -order).double()
 
         rotation = lambda t: rot90(t, plane=plane)
 
@@ -35,15 +35,15 @@ class HConvTests(unittest.TestCase):
             self.assertGreater(diff, 1)
 
 
-class CrossConvTests(unittest.TestCase):
+class HConvTests(unittest.TestCase):
     def test_equivariance_single_stream(self):
         b, s, h, w, d = 3, 5, 20, 20, 20
 
         rep1 = (2, )
         rep2 = (0, 0, 3)
 
-        cconv1 = CrossConv(rep1, rep2, s).double()
-        cconv2 = CrossConv(rep2, rep1, s).double()
+        cconv1 = HConv3d(rep1, rep2, s).double()
+        cconv2 = HConv3d(rep2, rep1, s).double()
 
         inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
@@ -66,8 +66,8 @@ class CrossConvTests(unittest.TestCase):
         rep1 = (2, )
         rep2 = (1, 2, 3)
 
-        cconv1 = CrossConv(rep1, rep2, r).double()
-        cconv2 = CrossConv(rep2, rep1, r).double()
+        cconv1 = HConv3d(rep1, rep2, r).double()
+        cconv2 = HConv3d(rep2, rep1, r).double()
 
         inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
@@ -92,9 +92,9 @@ class CrossConvTests(unittest.TestCase):
         rep3 = (4, 5, 6)
         rep4 = (2, )
 
-        cconv1 = CrossConv(rep1, rep2, r).double()
-        cconv2 = CrossConv(rep2, rep3, r).double()
-        cconv3 = CrossConv(rep3, rep4, r).double()
+        cconv1 = HConv3d(rep1, rep2, r).double()
+        cconv2 = HConv3d(rep2, rep3, r).double()
+        cconv3 = HConv3d(rep3, rep4, r).double()
 
         inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
