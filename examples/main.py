@@ -6,11 +6,10 @@ import numpy as np
 from tqdm import tqdm
 
 from hnet import HNet
-from loader import Rotmnist
 from utils import AvgMeter
-from cmplx import magnitude
+from harmonic.cmplx import magnitude
 
-torch.backends.cudnn.deterministic = True
+from loader import Rotmnist
 
 mean = 0.13
 std = 0.3
@@ -52,6 +51,7 @@ cuda = torch.cuda.is_available()
 if cuda:
     net = net.cuda()
     loss_fn = loss_fn.cuda()
+    torch.backends.cudnn.deterministic = True
 
 n_params = 0
 for param in net.parameters():

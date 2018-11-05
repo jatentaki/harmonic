@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 from torch_dimcheck import dimchecked
 
-from cmplx import cmplx 
+from .cmplx import cmplx 
 
 @dimchecked
 def avg_pool2d(input: ['n', 'f', 'hi', 'wi', 2],

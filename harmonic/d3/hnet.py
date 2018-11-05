@@ -4,10 +4,10 @@ import torch.nn as nn
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 
-from conv import CrossConv
-from nonl import ScalarGate
-from pooling import avg_pool2d
-from bnorm import MultiBNorm
+from .conv import CrossConv
+from .nonl import ScalarGate
+from .pooling import avg_pool2d
+from .bnorm import MultiBNorm
 
 
 hnet_default_layout = [

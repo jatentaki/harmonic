@@ -1,6 +1,6 @@
 import torch, unittest
-from bnorm import BatchNorm2d
-from utils import rot90
+from harmonic.d2 import BatchNorm2d
+from harmonic.utils import rot90
 
 class BNormTests(unittest.TestCase):
     def test_equivariance_eval(self):

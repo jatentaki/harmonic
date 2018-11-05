@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked, ShapeChecker
 
-from cmplx import cmplx 
+from .cmplx import cmplx 
 
 @dimchecked
 def complex_conv(x: ['b',     'f_in', 'xh', 'xw', 2],

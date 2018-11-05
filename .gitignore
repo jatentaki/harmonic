@@ -1,4 +1,6 @@
-__pycache__
+*__pycache__*
 rotmnist
 saves
+data
+*egg-info
 *.pth.tar

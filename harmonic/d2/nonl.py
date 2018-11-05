@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 from torch_dimcheck import ShapeChecker
-from cmplx import magnitude
+
+from ..cmplx import magnitude
 
 class ScalarGate(nn.Module):
     def __init__(self, repr):
