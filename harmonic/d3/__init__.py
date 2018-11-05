@@ -1,4 +1,4 @@
-from .bnorm import MultiBNorm as BatchNorm3d
+from .bnorm import BatchNorm3d
 from .conv import CrossConv as HConv3d
 from .nonl import ScalarGate as ScalarGate3d
 from .pooling import avg_pool3d

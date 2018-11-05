@@ -1,4 +1,4 @@
-from .bnorm import MultiBNorm as BatchNorm2d
+from .bnorm import StreamBatchNorm2d
 from .conv import CrossConv as HConv2d
 from .nonl import ScalarGate as ScalarGate2d
 from .pooling import avg_pool2d
