@@ -1,5 +1,5 @@
 import torch, unittest
-from nonl import ScalarGate
+from harmonic.d2.nonl import ScalarGate
 
 class ScalarGateTests(unittest.TestCase):
     def test_instantiation(self):

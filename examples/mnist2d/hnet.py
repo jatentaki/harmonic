@@ -4,11 +4,7 @@ import torch.nn as nn
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 
-from harmonic.d2.conv import CrossConv
-from harmonic.d2.nonl import ScalarGate
-from harmonic.d2.pooling import avg_pool2d
-from harmonic.d2.bnorm import MultiBNorm
-
+from harmonic.d2 import HConv2d, ScalarGate2d, avg_pool2d, BatchNorm2d
 
 hnet_default_layout = [
     (1, ),
@@ -27,9 +23,9 @@ class HNetBlock(nn.Module):
         self.first_nonl = first_nonl
 
         if first_nonl:
-            self.bnorm = MultiBNorm(self.in_repr)
-            self.nonl = ScalarGate(in_repr)
-        self.conv = CrossConv(in_repr, out_repr, radius, pad=pad)
+            self.bnorm = BatchNorm2d(self.in_repr)
+            self.nonl = ScalarGate2d(in_repr)
+        self.conv = HConv2d(in_repr, out_repr, radius, pad=pad)
 
     def forward(self, *x):
         y = x
