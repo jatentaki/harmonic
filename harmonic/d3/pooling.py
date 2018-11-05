@@ -3,11 +3,11 @@ import torch.nn.functional as F
 
 from torch_dimcheck import dimchecked
 
-from .cmplx import cmplx 
+from ..cmplx import cmplx 
 
 @dimchecked
-def avg_pool2d(input: ['n', 'f', 'hi', 'wi', 2],
-               *args, **kwargs) -> ['n', 'f', 'ho', 'wo', 2]:
+def avg_pool3d(input: ['n', 'f', 'hi', 'wi', 'di', 2],
+               *args, **kwargs) -> ['n', 'f', 'ho', 'wo', 'do', 2]:
     '''
         Do spatial average pooling without mixing real and imaginary parts
     '''
@@ -16,6 +16,6 @@ def avg_pool2d(input: ['n', 'f', 'hi', 'wi', 2],
     imag = input[..., 1]
 
     return cmplx(
-        F.avg_pool2d(real, *args, **kwargs),
-        F.avg_pool2d(imag, *args, **kwargs)
+        F.avg_pool3d(real, *args, **kwargs),
+        F.avg_pool3d(imag, *args, **kwargs)
     )

@@ -4,3 +4,4 @@ saves
 data
 *egg-info
 *.pth.tar
+*.swp

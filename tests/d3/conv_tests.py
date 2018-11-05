@@ -32,7 +32,7 @@ class HConvTests(unittest.TestCase):
         self._test_equivariance(-4)
 
     def _test_equivariance(self, order):
-        b, r, c1, c2, h, w, d = 5, 7, 5, 10, 30, 30, 30
+        b, r, c1, c2, h, w, d = 3, 5, 3, 8, 20, 20, 20
         conv1 = HConv(c1, c2, r, order).double()
         conv2 = HConv(c2, c1, r, -order).double()
 
@@ -49,7 +49,7 @@ class HConvTests(unittest.TestCase):
 
 class CrossConvTests(unittest.TestCase):
     def test_equivariance_single_stream(self):
-        b, s, h, w, d = 5, 7, 50, 50, 50
+        b, s, h, w, d = 3, 5, 20, 20, 20
 
         rep1 = (2, )
         rep2 = (0, 0, 3)
@@ -73,7 +73,7 @@ class CrossConvTests(unittest.TestCase):
 
 
     def test_equivariance_multi_stream(self):
-        b, r, h, w, d = 5, 7, 50, 50, 50
+        b, r, h, w, d = 3, 5, 20, 20, 20
 
         rep1 = (2, )
         rep2 = (1, 2, 3)
@@ -97,7 +97,7 @@ class CrossConvTests(unittest.TestCase):
 
 
     def test_equivariance_multi_stream_two_hops(self):
-        b, r, h, w, d = 5, 7, 50, 50, 50
+        b, r, h, w, d = 3, 5, 20, 20, 20
 
         rep1 = (2, )
         rep2 = (1, 2, 3)
@@ -122,4 +122,4 @@ class CrossConvTests(unittest.TestCase):
         
         self.assertLess(diff, 1e-3)
 
-unittest.main()
+unittest.main(failfast=True)

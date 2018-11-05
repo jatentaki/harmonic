@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 
-from .cmplx import magnitude
+from ..cmplx import magnitude
 
 class MultiBNorm(nn.Module):
     def __init__(self, repr, momentum=0.1, eps=1e-5):
