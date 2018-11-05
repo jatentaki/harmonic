@@ -4,47 +4,35 @@ from utils import rot90
 from harmonic.cmplx import magnitude
 
 class HConvTests(unittest.TestCase):
-    def test_equivariance_0(self):
-        self._test_equivariance(0)
-
-    def test_equivariance_1(self):
-        self._test_equivariance(1)
-
-    def test_equivariance_2(self):
-        self._test_equivariance(2)
-
-    def test_equivariance_3(self):
-        self._test_equivariance(3)
-
-    def test_equivariance_4(self):
-        self._test_equivariance(4)
-
-    def test_equivariance_m1(self):
-        self._test_equivariance(-1)
-
-    def test_equivariance_m2(self):
-        self._test_equivariance(-2)
-
-    def test_equivariance_m3(self):
-        self._test_equivariance(-3)
-
-    def test_equivariance_m4(self):
-        self._test_equivariance(-4)
-
-    def _test_equivariance(self, order):
+    def _diff_rotation(self, order, plane):
         b, r, c1, c2, h, w, d = 3, 5, 3, 8, 20, 20, 20
         conv1 = HConv(c1, c2, r, order).double()
         conv2 = HConv(c2, c1, r, -order).double()
 
+        rotation = lambda t: rot90(t, plane=plane)
+
         inp = torch.randn(b, c1, h, w, d, 2, dtype=torch.float64)
-        rot = rot90(inp)
+        rot = rotation(inp)
 
         base_fwd = conv2(conv1(inp))
         rot_fwd = conv2(conv1(rot))
 
-        diff = (rot90(base_fwd) - rot_fwd).max().item()
+        return (rotation(base_fwd) - rot_fwd).max().item()
         
-        self.assertLess(diff, 1e-5)
+    def test_equivariance_3_4(self):
+        for order in range(-4, 4):
+            diff = self._diff_rotation(order, plane=(3, 4))
+            self.assertLess(diff, 1e-5)
+
+    def test_nonequivariance_2_4(self):
+        for order in range(-4, 4):
+            diff = self._diff_rotation(order, plane=(2, 4))
+            self.assertGreater(diff, 1)
+
+    def test_nonequivariance_2_3(self):
+        for order in range(-4, 4):
+            diff = self._diff_rotation(order, plane=(2, 3))
+            self.assertGreater(diff, 1)
 
 
 class CrossConvTests(unittest.TestCase):
@@ -122,4 +110,4 @@ class CrossConvTests(unittest.TestCase):
         
         self.assertLess(diff, 1e-3)
 
-unittest.main(failfast=True)
+unittest.main()
