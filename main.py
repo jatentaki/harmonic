@@ -10,6 +10,8 @@ from loader import Rotmnist
 from utils import AvgMeter
 from cmplx import magnitude
 
+torch.backends.cudnn.deterministic = True
+
 mean = 0.13
 std = 0.3
 
