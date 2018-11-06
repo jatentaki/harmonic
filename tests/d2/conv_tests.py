@@ -1,9 +1,9 @@
 import torch, unittest
-from harmonic.d2.conv import HConv2d, StreamHConv2d
+from harmonic.d2.conv import HConv2d
 from utils import rot90
 from harmonic.cmplx import magnitude
 
-class StreamHConvTests(unittest.TestCase):
+class HConvTests(unittest.TestCase):
     def test_equivariance_0(self):
         self._test_equivariance(0)
 
@@ -32,22 +32,23 @@ class StreamHConvTests(unittest.TestCase):
         self._test_equivariance(-4)
 
     def _test_equivariance(self, order):
-        b, r, c1, c2, h, w = 5, 7, 5, 10, 30, 30
-        conv1 = StreamHConv2d(c1, c2, r, order).double()
-        conv2 = StreamHConv2d(c2, c1, r, -order).double()
+        b, s, c1, c2, h, w = 5, 7, 5, 10, 30, 30
+        repr1 = [c1]
+        repr2 = [0] * (order - 1) + [c2]
+
+        conv1 = HConv2d(repr1, repr2, s).double()
+        conv2 = HConv2d(repr2, repr1, s).double()
 
         inp = torch.randn(b, c1, h, w, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = conv2(conv1(inp))
-        rot_fwd = conv2(conv1(rot))
+        base_fwd = conv2(*conv1(inp))
+        rot_fwd = conv2(*conv1(rot))
 
-        diff = (rot90(base_fwd) - rot_fwd).max().item()
+        diff = (rot90(base_fwd[0]) - rot_fwd[0]).max().item()
         
         self.assertLess(diff, 1e-5)
 
-
-class HConvTests(unittest.TestCase):
     def test_equivariance_single_stream(self):
         b, s, h, w = 5, 7, 50, 50
 
@@ -122,4 +123,4 @@ class HConvTests(unittest.TestCase):
         
         self.assertLess(diff, 1e-3)
 
-unittest.main()
+unittest.main(failfast=True)
