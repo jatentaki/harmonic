@@ -42,10 +42,10 @@ class HConvTests(unittest.TestCase):
         inp = torch.randn(b, c1, h, w, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = conv2(*conv1(inp))
-        rot_fwd = conv2(*conv1(rot))
+        base_fwd = conv2(conv1(inp))
+        rot_fwd = conv2(conv1(rot))
 
-        diff = (rot90(base_fwd[0]) - rot_fwd[0]).max().item()
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
         
         self.assertLess(diff, 1e-5)
 
@@ -61,14 +61,10 @@ class HConvTests(unittest.TestCase):
         inp = torch.randn(b, rep1[0], h, w, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = cconv2(*cconv1(inp))
-        rot_fwd = cconv2(*cconv1(rot))
+        base_fwd = cconv2(cconv1(inp))
+        rot_fwd = cconv2(cconv1(rot))
 
-        # single output stream
-        self.assertEqual(len(base_fwd), 1)
-        self.assertEqual(len(rot_fwd), 1)
-
-        diff = (rot90(base_fwd[0]) -  rot_fwd[0]).max().item()
+        diff = (rot90(base_fwd) -  rot_fwd).max().item()
         
         self.assertLess(diff, 1e-3)
 
@@ -85,14 +81,10 @@ class HConvTests(unittest.TestCase):
         inp = torch.randn(b, rep1[0], h, w, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = cconv2(*cconv1(inp))
-        rot_fwd = cconv2(*cconv1(rot))
+        base_fwd = cconv2(cconv1(inp))
+        rot_fwd = cconv2(cconv1(rot))
 
-        # single output stream
-        self.assertEqual(len(base_fwd), 1)
-        self.assertEqual(len(rot_fwd), 1)
-
-        diff = (rot90(base_fwd[0]) - rot_fwd[0]).max().item()
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
         
         self.assertLess(diff, 1e-3)
 
@@ -112,14 +104,10 @@ class HConvTests(unittest.TestCase):
         inp = torch.randn(b, rep1[0], h, w, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = cconv3(*cconv2(*cconv1(inp)))
-        rot_fwd = cconv3(*cconv2(*cconv1(rot)))
+        base_fwd = cconv3(cconv2(cconv1(inp)))
+        rot_fwd = cconv3(cconv2(cconv1(rot)))
 
-        # single output stream
-        self.assertEqual(len(base_fwd), 1)
-        self.assertEqual(len(rot_fwd), 1)
-
-        diff = (rot90(base_fwd[0]) - rot_fwd[0]).max().item()
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
         
         self.assertLess(diff, 1e-3)
 
