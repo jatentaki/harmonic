@@ -1,9 +1,9 @@
 import torch, unittest
-from harmonic.d3.nonl import ScalarGate
+from harmonic.d3 import ScalarGate3d
 
 class ScalarGateTests(unittest.TestCase):
     def test_forward(self):
-        nonl = ScalarGate((3, 6, 0, 1))
+        nonl = ScalarGate3d((3, 6, 0, 1))
         
         n, h, w, d = 3, 40, 40, 40
 
