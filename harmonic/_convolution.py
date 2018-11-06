@@ -76,7 +76,7 @@ class _HConv(nn.Module):
             )
             self.weights[ords2s(in_ord, out_ord)] = weight 
 
-    def forward(self, x: ['b', 'fi', 'hx', 'wx', 2]) -> ['b', 'fo', 'ho', 'wo', 2]:
+    def forward(self, x: ['b', 'fi', 'hx', 'wx', ..., 2]) -> ['b', 'fo', 'ho', 'wo', ..., 2]:
         spatial_unsqueeze = [self.size] * self.dim
 
         input_kernels = []

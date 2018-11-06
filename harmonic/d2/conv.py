@@ -14,3 +14,7 @@ class HConv2d(_HConv):
         super(HConv2d, self).__init__(
             in_repr, out_repr, radius, pad=pad, dim=2
         )
+
+    @dimchecked
+    def forward(self, x: ['b', 'fi', 'hx', 'wx', 2]) -> ['b', 'fo', 'ho', 'wo', 2]:
+        return super(HConv2d, self).forward(x)

@@ -1,13 +1,15 @@
 import torch, unittest
-from harmonic.d3.conv import HConv3d, StreamHConv3d
+from harmonic.d3.conv import HConv3d
 from utils import rot90
-from harmonic.cmplx import magnitude
 
-class StreamHConvTests(unittest.TestCase):
+class HConvTests(unittest.TestCase):
     def _diff_rotation(self, order, plane):
-        b, r, c1, c2, h, w, d = 3, 5, 3, 8, 20, 20, 20
-        conv1 = StreamHConv3d(c1, c2, r, order).double()
-        conv2 = StreamHConv3d(c2, c1, r, -order).double()
+        b, s, c1, c2, h, w, d = 3, 5, 3, 8, 20, 20, 20
+        repr1 = [c1]
+        repr2 = [0] * (order - 1) + [c2]
+
+        conv1 = HConv3d(repr1, repr2, s).double()
+        conv2 = HConv3d(repr2, repr1, s).double()
 
         rotation = lambda t: rot90(t, plane=plane)
 
@@ -34,8 +36,6 @@ class StreamHConvTests(unittest.TestCase):
             diff = self._diff_rotation(order, plane=(2, 3))
             self.assertGreater(diff, 1)
 
-
-class HConvTests(unittest.TestCase):
     def test_equivariance_single_stream(self):
         b, s, h, w, d = 3, 5, 20, 20, 20
 
@@ -48,65 +48,75 @@ class HConvTests(unittest.TestCase):
         inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = cconv2(*cconv1(inp))
-        rot_fwd = cconv2(*cconv1(rot))
+        base_fwd = cconv2(cconv1(inp))
+        rot_fwd = cconv2(cconv1(rot))
 
-        # single output stream
-        self.assertEqual(len(base_fwd), 1)
-        self.assertEqual(len(rot_fwd), 1)
-
-        diff = (rot90(base_fwd[0]) -  rot_fwd[0]).max().item()
+        diff = (rot90(base_fwd) -  rot_fwd).max().item()
         
         self.assertLess(diff, 1e-3)
 
 
     def test_equivariance_multi_stream(self):
-        b, r, h, w, d = 3, 5, 20, 20, 20
+        b, s, h, w, d = 3, 5, 20, 20, 20
 
         rep1 = (2, )
         rep2 = (1, 2, 3)
 
-        cconv1 = HConv3d(rep1, rep2, r).double()
-        cconv2 = HConv3d(rep2, rep1, r).double()
+        cconv1 = HConv3d(rep1, rep2, s).double()
+        cconv2 = HConv3d(rep2, rep1, s).double()
 
         inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = cconv2(*cconv1(inp))
-        rot_fwd = cconv2(*cconv1(rot))
+        base_fwd = cconv2(cconv1(inp))
+        rot_fwd = cconv2(cconv1(rot))
 
-        # single output stream
-        self.assertEqual(len(base_fwd), 1)
-        self.assertEqual(len(rot_fwd), 1)
-
-        diff = (rot90(base_fwd[0]) - rot_fwd[0]).max().item()
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
         
         self.assertLess(diff, 1e-3)
 
 
     def test_equivariance_multi_stream_two_hops(self):
-        b, r, h, w, d = 3, 5, 20, 20, 20
+        b, s, h, w, d = 3, 5, 20, 20, 20
 
         rep1 = (2, )
         rep2 = (1, 2, 3)
         rep3 = (4, 5, 6)
         rep4 = (2, )
 
-        cconv1 = HConv3d(rep1, rep2, r).double()
-        cconv2 = HConv3d(rep2, rep3, r).double()
-        cconv3 = HConv3d(rep3, rep4, r).double()
+        cconv1 = HConv3d(rep1, rep2, s).double()
+        cconv2 = HConv3d(rep2, rep3, s).double()
+        cconv3 = HConv3d(rep3, rep4, s).double()
 
         inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
 
-        base_fwd = cconv3(*cconv2(*cconv1(inp)))
-        rot_fwd = cconv3(*cconv2(*cconv1(rot)))
+        base_fwd = cconv3(cconv2(cconv1(inp)))
+        rot_fwd = cconv3(cconv2(cconv1(rot)))
 
-        # single output stream
-        self.assertEqual(len(base_fwd), 1)
-        self.assertEqual(len(rot_fwd), 1)
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
+        
+        self.assertLess(diff, 1e-3)
 
-        diff = (rot90(base_fwd[0]) - rot_fwd[0]).max().item()
+    def test_equivariance_multi_stream_two_hops_sparse(self):
+        b, s, h, w, d = 3, 5, 20, 20, 20
+
+        rep1 = (2, )
+        rep2 = (1, 0, 3)
+        rep3 = (0, 5, 6)
+        rep4 = (2, )
+
+        cconv1 = HConv3d(rep1, rep2, s).double()
+        cconv2 = HConv3d(rep2, rep3, s).double()
+        cconv3 = HConv3d(rep3, rep4, s).double()
+
+        inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
+        rot = rot90(inp)
+
+        base_fwd = cconv3(cconv2(cconv1(inp)))
+        rot_fwd = cconv3(cconv2(cconv1(rot)))
+
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
         
         self.assertLess(diff, 1e-3)
 

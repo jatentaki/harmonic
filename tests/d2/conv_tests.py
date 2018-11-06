@@ -1,7 +1,6 @@
 import torch, unittest
 from harmonic.d2.conv import HConv2d
 from utils import rot90
-from harmonic.cmplx import magnitude
 
 class HConvTests(unittest.TestCase):
     def test_equivariance_0(self):
