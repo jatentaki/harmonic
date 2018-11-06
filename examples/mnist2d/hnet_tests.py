@@ -1,6 +1,5 @@
 import torch, unittest
 from hnet import HNet
-from harmonic.cmplx import magnitude
 from utils import rot90
 
 class HNetTests(unittest.TestCase):

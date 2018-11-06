@@ -27,12 +27,12 @@ class HNetBlock(nn.Module):
             self.nonl = ScalarGate2d(in_repr)
         self.conv = HConv2d(in_repr, out_repr, radius, pad=pad)
 
-    def forward(self, *x):
+    def forward(self, x):
         y = x
         if self.first_nonl:
-            y = self.bnorm(*y)
-            y = self.nonl(*y)
-        y = self.conv(*y)
+            y = self.bnorm(y)
+            y = self.nonl(y)
+        y = self.conv(y)
 
         return y
 
@@ -55,8 +55,8 @@ class HNet(nn.Module):
     def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', -1, 'wo', 'ho', 2]:
         x_cmplx = torch.stack([x, torch.zeros_like(x)], dim=-1)
         
-        y_cmplx = (x_cmplx, )
+        y_cmplx = x_cmplx
         for block in self.seq:
-            y_cmplx = block(*y_cmplx)
+            y_cmplx = block(y_cmplx)
 
-        return y_cmplx[0]
+        return y_cmplx
