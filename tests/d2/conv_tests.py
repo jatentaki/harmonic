@@ -111,4 +111,26 @@ class HConvTests(unittest.TestCase):
         
         self.assertLess(diff, 1e-3)
 
-unittest.main(failfast=True)
+    def test_equivariance_multi_stream_two_hops_sparse(self):
+        b, r, h, w = 5, 7, 50, 50
+
+        rep1 = (2, )
+        rep2 = (1, 0, 3)
+        rep3 = (0, 5, 6)
+        rep4 = (2, )
+
+        cconv1 = HConv2d(rep1, rep2, r).double()
+        cconv2 = HConv2d(rep2, rep3, r).double()
+        cconv3 = HConv2d(rep3, rep4, r).double()
+
+        inp = torch.randn(b, rep1[0], h, w, 2, dtype=torch.float64)
+        rot = rot90(inp)
+
+        base_fwd = cconv3(cconv2(cconv1(inp)))
+        rot_fwd = cconv3(cconv2(cconv1(rot)))
+
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
+        
+        self.assertLess(diff, 1e-3)
+
+unittest.main()

@@ -3,8 +3,10 @@ import torch.nn as nn
 
 from .cmplx import cmplx
 
+from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 
+@localized_module
 class Weights(nn.Module):
     def __init__(self, in_channels, out_channels, size, radius, order,
                  initialize=True):
