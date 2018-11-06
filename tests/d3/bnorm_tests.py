@@ -1,13 +1,14 @@
 import torch, unittest
-from harmonic.d3.bnorm import StreamBatchNorm3d
+from harmonic.d3.bnorm import BatchNorm3d
 from utils import rot90
 
 class BNormTests(unittest.TestCase):
     def test_equivariance_eval(self):
-        b, f, h, w, d = 5, 10, 30, 30, 30
-        bnorm = StreamBatchNorm3d(f).double()
+        b, h, w, d = 5, 30, 30, 30
+        repr = (2, 3)
+        bnorm = BatchNorm3d(repr).double()
 
-        inp = torch.randn(b, f, h, w, d, 2, dtype=torch.float64)
+        inp = torch.randn(b, sum(repr), h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
 
         bnorm.eval()
@@ -18,10 +19,11 @@ class BNormTests(unittest.TestCase):
         self.assertLess(diff, 1e-5)
 
     def test_equivariance_train(self):
-        b, f, h, w, d = 5, 10, 30, 30, 30
-        bnorm = StreamBatchNorm3d(f).double()
+        b, h, w, d = 5, 30, 30, 30
+        repr = (2, 3)
+        bnorm = BatchNorm3d(repr).double()
 
-        inp = torch.randn(b, f, h, w, d, 2, dtype=torch.float64)
+        inp = torch.randn(b, sum(repr), h, w, d, 2, dtype=torch.float64)
         rot = rot90(inp)
 
         # train mode
