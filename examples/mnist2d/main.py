@@ -51,7 +51,6 @@ cuda = torch.cuda.is_available()
 if cuda:
     net = net.cuda()
     loss_fn = loss_fn.cuda()
-    torch.backends.cudnn.deterministic = True
 
 n_params = 0
 for param in net.parameters():
