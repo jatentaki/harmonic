@@ -21,43 +21,12 @@ class _ScalarGate(nn.Module):
         self.conv1 = conv(total_fmaps, total_fmaps, 1)
         self.conv2 = conv(total_fmaps, total_fmaps, 1)
 
-    def forward(self, *streams):
-        if len(streams) != len(self.repr):
-            fmt = "Based on repr {} expected {} streams, got {}"
-            msg = fmt.format(self.repr, len(self.repr), len(streams))
-            raise ValueError(msg)
-
-        checker = ShapeChecker()
-        for i, stream in enumerate(streams):
-            if stream is None:
-                continue
-
-            checker.check(stream, self.dimchk, name='in_stream {}'.format(i))
-
-        magnitudes = [magnitude(s) for s in streams if s is not None]
-        # cat along feature axis to gate across all streams
-        magnitudes = torch.cat(magnitudes, dim=1) 
+    def forward(self, x: ['b', 'f', 'h', 'w', ..., 2]) -> ['b', 'f', 'h', 'w', ..., 2]:
+        magnitudes = magnitude(x)
         
         g = self.conv1(magnitudes)
         g = torch.relu(g)
         g = self.conv2(g)
         g = torch.sigmoid(g)
 
-        out_streams = []
-        offset = 0
-        for mult, stream in zip(self.repr, streams):
-            if stream is None:
-                out_streams.append(None)
-                continue
-
-            out_streams.append(g[:, offset:offset+mult, ...].unsqueeze(-1) * stream)
-            offset += mult
-
-        for i, stream in enumerate(out_streams):
-            if stream is None:
-                continue
-
-            checker.check(stream, self.dimchk, name='out_stream {}'.format(i))
-
-        return out_streams
-            
+        return x * g.unsqueeze(-1)
