@@ -7,7 +7,7 @@ class ScalarGateTests(unittest.TestCase):
         
         n, h, w, d = 3, 40, 40, 40
 
-        inputs = torch.randn(n, 3 + 6 + 1, h, w, d, 2)
+        inputs = torch.randn(2, n, 3 + 6 + 1, h, w, d)
         output = nonl(inputs)
 
 

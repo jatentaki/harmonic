@@ -6,5 +6,5 @@ class BatchNorm3d(_BatchNorm):
     def __init__(self, repr, eps=1e-2):
         super(BatchNorm3d, self).__init__(repr, eps=eps, dim=3)
 
-    def forward(self, x: ['b', 'f', 'w', 'h', 'd', 2]) -> ['b', 'f', 'w', 'h', 'd', 2]:
+    def forward(self, x: [2, 'b', 'f', 'w', 'h', 'd']) -> [2, 'b', 'f', 'w', 'h', 'd']:
         return super(BatchNorm3d, self).forward(x)

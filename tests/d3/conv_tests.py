@@ -13,7 +13,7 @@ class HConvTests(unittest.TestCase):
 
         rotation = lambda t: rot90(t, plane=plane)
 
-        inp = torch.randn(b, c1, h, w, d, 2, dtype=torch.float64)
+        inp = torch.randn(2, b, c1, h, w, d, dtype=torch.float64)
         rot = rotation(inp)
 
         base_fwd = conv2(conv1(inp))
@@ -21,19 +21,19 @@ class HConvTests(unittest.TestCase):
 
         return (rotation(base_fwd) - rot_fwd).max().item()
         
-    def test_equivariance_3_4(self):
+    def test_equivariance_x_y(self):
         for order in range(-4, 4):
-            diff = self._diff_rotation(order, plane=(3, 4))
+            diff = self._diff_rotation(order, plane=(4, 5))
             self.assertLess(diff, 1e-5)
 
-    def test_nonequivariance_2_4(self):
+    def test_nonequivariance_z_y(self):
         for order in range(-4, 4):
-            diff = self._diff_rotation(order, plane=(2, 4))
+            diff = self._diff_rotation(order, plane=(3, 5))
             self.assertGreater(diff, 1)
 
-    def test_nonequivariance_2_3(self):
+    def test_nonequivariance_z_x(self):
         for order in range(-4, 4):
-            diff = self._diff_rotation(order, plane=(2, 3))
+            diff = self._diff_rotation(order, plane=(3, 4))
             self.assertGreater(diff, 1)
 
     def test_equivariance_single_stream(self):
@@ -45,7 +45,7 @@ class HConvTests(unittest.TestCase):
         cconv1 = HConv3d(rep1, rep2, s).double()
         cconv2 = HConv3d(rep2, rep1, s).double()
 
-        inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
+        inp = torch.randn(2, b, rep1[0], h, w, d, dtype=torch.float64)
         rot = rot90(inp)
 
         base_fwd = cconv2(cconv1(inp))
@@ -65,7 +65,7 @@ class HConvTests(unittest.TestCase):
         cconv1 = HConv3d(rep1, rep2, s).double()
         cconv2 = HConv3d(rep2, rep1, s).double()
 
-        inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
+        inp = torch.randn(2, b, rep1[0], h, w, d, dtype=torch.float64)
         rot = rot90(inp)
 
         base_fwd = cconv2(cconv1(inp))
@@ -88,7 +88,7 @@ class HConvTests(unittest.TestCase):
         cconv2 = HConv3d(rep2, rep3, s).double()
         cconv3 = HConv3d(rep3, rep4, s).double()
 
-        inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
+        inp = torch.randn(2, b, rep1[0], h, w, d, dtype=torch.float64)
         rot = rot90(inp)
 
         base_fwd = cconv3(cconv2(cconv1(inp)))
@@ -110,7 +110,7 @@ class HConvTests(unittest.TestCase):
         cconv2 = HConv3d(rep2, rep3, s).double()
         cconv3 = HConv3d(rep3, rep4, s).double()
 
-        inp = torch.randn(b, rep1[0], h, w, d, 2, dtype=torch.float64)
+        inp = torch.randn(2, b, rep1[0], h, w, d, dtype=torch.float64)
         rot = rot90(inp)
 
         base_fwd = cconv3(cconv2(cconv1(inp)))
