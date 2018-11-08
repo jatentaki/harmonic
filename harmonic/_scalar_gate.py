@@ -15,13 +15,12 @@ class _ScalarGate(nn.Module):
         self.dim = dim
 
         conv = nn.Conv2d if dim == 2 else nn.Conv3d
-        self.dimchk = ['b', -1, 'h', 'w', 2] if dim == 2 else ['b', -1, 'h', 'w', 'd', 2]
 
         total_fmaps = sum(repr)
         self.conv1 = conv(total_fmaps, total_fmaps, 1)
         self.conv2 = conv(total_fmaps, total_fmaps, 1)
 
-    def forward(self, x: ['b', 'f', 'h', 'w', ..., 2]) -> ['b', 'f', 'h', 'w', ..., 2]:
+    def forward(self, x: [2, 'b', 'f', 'h', 'w', ...]) -> [2, 'b', 'f', 'h', 'w', ...]:
         magnitudes = magnitude(x)
         
         g = self.conv1(magnitudes)
@@ -29,4 +28,4 @@ class _ScalarGate(nn.Module):
         g = self.conv2(g)
         g = torch.sigmoid(g)
 
-        return x * g.unsqueeze(-1)
+        return x * g.unsqueeze(0)
