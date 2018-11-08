@@ -8,9 +8,9 @@ from .cmplx import cmplx
 from .weights import Weights
 
 @dimchecked
-def cconv_nd(x: ['b',     'f_in', 'hx', 'wx', ..., 2],
-             w: ['f_out', 'f_in', 'hk', 'wk', ..., 2],
-             dim=2, pad=False) -> ['b', 'f_out', 'ho', 'wo', ..., 2]:
+def cconv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
+             w: [2, 'f_out', 'f_in', 'hk', 'wk', ...,],
+             dim=2, pad=False) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
 
     if dim not in [2, 3]:
         raise ValueError("Dim can only be 2 or 3, got {}".format(dim))
@@ -22,11 +22,11 @@ def cconv_nd(x: ['b',     'f_in', 'hx', 'wx', ..., 2],
 
     conv = F.conv3d if dim == 3 else F.conv2d
 
-    real = conv(x[..., 0], w[..., 0], padding=padding) - \
-           conv(x[..., 1], w[..., 1], padding=padding)
+    real = conv(x[0, ...], w[0, ...], padding=padding) - \
+           conv(x[1, ...], w[1, ...], padding=padding)
 
-    imag = conv(x[..., 0], w[..., 1], padding=padding) + \
-           conv(x[..., 1], w[..., 0], padding=padding)
+    imag = conv(x[0, ...], w[1, ...], padding=padding) + \
+           conv(x[1, ...], w[0, ...], padding=padding)
 
     return cmplx(real, imag)
 
@@ -76,7 +76,7 @@ class _HConv(nn.Module):
             )
             self.weights[ords2s(in_ord, out_ord)] = weight 
 
-    def forward(self, x: ['b', 'fi', 'hx', 'wx', ..., 2]) -> ['b', 'fo', 'ho', 'wo', ..., 2]:
+    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
         spatial_unsqueeze = [self.size] * self.dim
 
         input_kernels = []
@@ -92,13 +92,13 @@ class _HConv(nn.Module):
                 ix = ords2s(in_ord, out_ord)
                 kernel = self.weights[ix].cartesian_harmonics()
                 kernel = kernel.reshape(
-                    out_mult, in_mult, *spatial_unsqueeze, 2
+                    2, out_mult, in_mult, *spatial_unsqueeze
                 )
 
                 output_kernels.append(kernel)
 
-            input_kernels.append(torch.cat(output_kernels, dim=0))
+            input_kernels.append(torch.cat(output_kernels, dim=1))
 
-        kernels = torch.cat(input_kernels, dim=1)
+        kernels = torch.cat(input_kernels, dim=2)
 
         return cconv_nd(x, kernels, dim=self.dim, pad=self.pad)

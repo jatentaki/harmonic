@@ -94,7 +94,7 @@ class Weights(nn.Module):
 
 
     @dimchecked
-    def polar_harmonics(self) -> ['f', 'ring', 'angle', 2]:
+    def polar_harmonics(self) -> [2, 'f', 'ring', 'angle']:
         '''
             Synthesize filters in polar coordinates. Grid is given by `angles` and
             `radii`, parameters by `betas` (phase offset) and `r` (radial profile)
@@ -112,9 +112,9 @@ class Weights(nn.Module):
         return cmplx(real, imag)
 
     @dimchecked
-    def cartesian_harmonics(self) -> ['f', 'd', 'd', 2]:
+    def cartesian_harmonics(self) -> [2, 'f', 'd', 'd']:
         '''
             Interpolate the results of `polar_harmonics()` onto Cartesian grid
         '''
         polar_harm = self.polar_harmonics()
-        return torch.einsum('frac,dera->fdec', (polar_harm, self.gauss))
+        return torch.einsum('cfra,dera->cfde', (polar_harm, self.gauss))

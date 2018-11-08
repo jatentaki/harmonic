@@ -1,4 +1,4 @@
-def rot90(x, k=1, plane=(2, 3)):
+def rot90(x, k=1, plane=(3, 4)):
     if k == 0:
         return x
     elif k == 1:
