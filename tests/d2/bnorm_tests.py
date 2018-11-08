@@ -9,7 +9,7 @@ class BNormTests(unittest.TestCase):
         repr = (2, 3)
         bnorm = BatchNorm2d(repr).double()
 
-        inp = torch.randn(b, sum(repr), h, w, 2, dtype=torch.float64)
+        inp = torch.randn(2, b, sum(repr), h, w, dtype=torch.float64)
         rot = rot90(inp)
 
         # eval mode
@@ -25,7 +25,7 @@ class BNormTests(unittest.TestCase):
         repr = (2, 3)
         bnorm = BatchNorm2d(repr).double()
 
-        inp = torch.randn(b, sum(repr), h, w, 2, dtype=torch.float64)
+        inp = torch.randn(2, b, sum(repr), h, w, dtype=torch.float64)
         rot = rot90(inp)
 
         # train mode

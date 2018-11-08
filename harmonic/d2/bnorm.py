@@ -7,5 +7,5 @@ class BatchNorm2d(_BatchNorm):
         super(BatchNorm2d, self).__init__(repr, eps=eps, dim=2)
 
     @dimchecked
-    def forward(self, x: ['b', 'f', 'w', 'h', 2]) -> ['b', 'f', 'w', 'h', 2]:
+    def forward(self, x: [2, 'b', 'f', 'w', 'h']) -> [2, 'b', 'f', 'w', 'h']:
         return super(BatchNorm2d, self).forward(x)

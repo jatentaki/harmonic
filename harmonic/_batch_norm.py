@@ -18,22 +18,22 @@ class _BatchNorm(nn.Module):
         self.n_features = sum(repr)
 
 
-    def forward(self, x: ['b', 'f', 'w', 'h', ..., 2]) -> ['b', 'f', 'w', 'h', ..., 2]:
-        if x.shape[1] != self.n_features:
+    def forward(self, x: [2, 'b', 'f', 'w', 'h', ...]) -> [2, 'b', 'f', 'w', 'h', ...]:
+        if x.shape[2] != self.n_features:
             fmt = ("1st dimension on input `x` ({}) doesn't match with "
                    "declared # of features ({} == sum({}))")
-            msg = fmt.format(x.shape[1], self.n_features, tuple(self.repr))
+            msg = fmt.format(x.shape[2], self.n_features, tuple(self.repr))
             raise ValueError(msg)
-        flat = x.transpose(0, 1).reshape(self.n_features, -1, 2)
+        flat = x.transpose(1, 2).reshape(2, self.n_features, -1)
 
         # compute mean
-        means = flat.mean(dim=1, keepdim=True)
+        means = flat.mean(dim=2, keepdim=True)
 
         # compute std
         stds = magnitude(flat - means).std(dim=1) + self.eps
 
         spatial = [1] * self.dim
-        mean_corrected = x - means.reshape(1, -1, *spatial, 2)
+        mean_corrected = x - means.reshape(2, 1, -1, *spatial)
         std_corrected = mean_corrected / stds.reshape(1, -1, *spatial, 1)
 
 
