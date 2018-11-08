@@ -21,7 +21,7 @@ class Weights(nn.Module):
 
         self.total_channels = in_channels * out_channels
         self.n_rings = int(math.ceil(self.radius))
-        self.n_angles = 12 # FIXME: figure out he right number
+        self.n_angles = 13 # FIXME: figure out he right number
 
         self.r = nn.Parameter(
             torch.randn(self.total_channels, self.n_rings, requires_grad=True)

@@ -23,7 +23,7 @@ train_loader = torch.utils.data.DataLoader(
             T.ToTensor(),
             normalize
         ])),
-    batch_size=250, shuffle=True, num_workers=1
+    batch_size=50, shuffle=True, num_workers=1
 )
 
 #train_loader = torch.utils.data.DataLoader(
@@ -100,6 +100,10 @@ def save_one(x, predictions, epoch, batch, prefix=''):
 
     save_nr += 1
     
+print('tracing...')
+net = torch.jit.trace(net, next(iter(train_loader))[0])
+print('done')
+
 for epoch in range(n_epochs):
     with tqdm(total=len(train_loader), dynamic_ncols=True) as progress:
         mean_loss = AvgMeter()
@@ -109,12 +113,13 @@ for epoch in range(n_epochs):
             if cuda:
                 x, y = x.cuda(), y.cuda()
 
+            optim.zero_grad()
             maps = net(x)
             predictions = maps.sum(dim=(2, 3))
-            optim.zero_grad()
             loss = loss_fn(predictions, y)
-            acc = accuracy(predictions, y)
             loss.backward()
+
+            acc = accuracy(predictions, y)
             optim.step()
             progress.update(1)
             mean_loss.update(loss.item())
