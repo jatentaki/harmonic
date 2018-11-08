@@ -10,5 +10,5 @@ def cmplx(real: [...], imag: [...]) -> [2, ...]:
     return torch.stack([real, imag], dim=0)
 
 @dimchecked
-def from_real(real: [2, ...]) -> [2, ...]:
+def from_real(real: [...]) -> [2, ...]:
     return cmplx(real, torch.zeros_like(real))

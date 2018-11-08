@@ -5,6 +5,7 @@ from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 
 from harmonic.d2 import HConv2d, ScalarGate2d, avg_pool2d, BatchNorm2d
+from harmonic.cmplx import from_real
 
 hnet_default_layout = [
     (1, ),
@@ -52,11 +53,11 @@ class HNet(nn.Module):
         
 
     @dimchecked
-    def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', -1, 'wo', 'ho', 2]:
-        x_cmplx = torch.stack([x, torch.zeros_like(x)], dim=-1)
+    def forward(self, x: ['n', 1, 'wi', 'hi']) -> ['n', -1, 'wo', 'ho']:
+        x_cmplx = from_real(x)
         
         y_cmplx = x_cmplx
         for block in self.seq:
             y_cmplx = block(y_cmplx)
 
-        return y_cmplx
+        return y_cmplx[0, ...]

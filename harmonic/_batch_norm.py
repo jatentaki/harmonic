@@ -34,7 +34,7 @@ class _BatchNorm(nn.Module):
 
         spatial = [1] * self.dim
         mean_corrected = x - means.reshape(2, 1, -1, *spatial)
-        std_corrected = mean_corrected / stds.reshape(1, -1, *spatial, 1)
 
+        std_corrected = mean_corrected / stds.reshape(1, 1, -1, *spatial)
 
         return std_corrected

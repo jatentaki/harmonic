@@ -110,7 +110,7 @@ for epoch in range(n_epochs):
                 x, y = x.cuda(), y.cuda()
 
             maps = net(x)
-            predictions = maps[..., 0].sum(dim=(2, 3))
+            predictions = maps.sum(dim=(2, 3))
             optim.zero_grad()
             loss = loss_fn(predictions, y)
             acc = accuracy(predictions, y)
@@ -130,7 +130,7 @@ for epoch in range(n_epochs):
                 x, y = x.cuda(), y.cuda()
 
             maps = net(x)
-            predictions = maps[..., 0].sum(dim=(2, 3))
+            predictions = maps.sum(dim=(2, 3))
             acc = accuracy(predictions, y)
             progress.update(1)
             mean_acc.update(acc[0].item())
