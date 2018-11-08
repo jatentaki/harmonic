@@ -17,7 +17,8 @@ class _BatchNorm(nn.Module):
         self.eps = eps
         self.momentum = momentum
         self.total_features = sum(repr)
-        self.register_buffer('running_vars', torch.ones(self.total_features))
+#        self.register_buffer('running_stds', torch.ones(self.total_features))
+#        self.register_buffer('running_means', torch.zeros(self.total_features, 2))
 
 
     def forward(self, x: ['b', 'f', 'w', 'h', ..., 2]) -> ['b', 'f', 'w', 'h', ..., 2]:
@@ -27,20 +28,26 @@ class _BatchNorm(nn.Module):
             msg = fmt.format(x.shape[1], self.num_features, tuple(self.repr))
             raise ValueError(msg)
 
-        if self.eval:
-            norms = self.running_vars + self.eps
-        else:
-            magnitudes = magnitude(x)
+#        if not self.training:
+#            means = self.running_means
+#            stds = self.running_means + self.eps
+#        else:
+        flat = x.transpose(0, 1).reshape(self.total_features, -1, 2)
 
-            # transpose to get shape ['f', ...], then flatten batch and spatial dims
-            magnitudes = magnitudes.transpose(0, 1).reshape(self.total_features, -1)
-            stds = magnitudes.std(dim=1)
+        # compute mean
+        means = flat.mean(dim=1, keepdim=True)
 
-            norms = stds + self.eps
+        # compute std
+        stds = magnitude(flat - means).std(dim=1)
 
-            new_vars = self.momentum * stds + (1 - self.momentum) * self.running_vars
-            self.running_vars = new_vars.detach()
+#        new_stds = self.momentum * stds + (1 - self.momentum) * self.running_stds
+#        new_means = self.momentum * means + (1 - self.momentum) * self.running_means
+#
+#        self.running_stds = new_stds.detach()
+#        self.running_means = new_means.detach()
 
-        norms = norms.reshape(1, -1, *([1] * self.dim), 1)
+        spatial = [1] * self.dim
+        mean_corrected = x - means.reshape(1, -1, *spatial, 2)
+        std_corrected = mean_corrected / stds.reshape(1, -1, *spatial, 1)
 
-        return x / norms
+        return std_corrected
