@@ -23,7 +23,7 @@ train_loader = torch.utils.data.DataLoader(
             T.ToTensor(),
             normalize
         ])),
-    batch_size=50, shuffle=True, num_workers=1
+    batch_size=250, shuffle=True, num_workers=1
 )
 
 #train_loader = torch.utils.data.DataLoader(
@@ -101,7 +101,10 @@ def save_one(x, predictions, epoch, batch, prefix=''):
     save_nr += 1
     
 print('tracing...')
-net = torch.jit.trace(net, next(iter(train_loader))[0])
+example = next(iter(train_loader))[0]
+if cuda:
+    example = example.cuda()
+net = torch.jit.trace(net, example)
 print('done')
 
 for epoch in range(n_epochs):
