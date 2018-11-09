@@ -6,14 +6,14 @@ from torch_dimcheck import dimchecked
 from ..cmplx import cmplx 
 
 @dimchecked
-def avg_pool3d(input: ['n', 'f', 'hi', 'wi', 'di', 2],
-               *args, **kwargs) -> ['n', 'f', 'ho', 'wo', 'do', 2]:
+def avg_pool3d(input:              [2, 'n', 'f', 'hi', 'wi', 'di'],
+               *args, **kwargs) -> [2, 'n', 'f', 'ho', 'wo', 'do']:
     '''
         Do spatial average pooling without mixing real and imaginary parts
     '''
 
-    real = input[..., 0]
-    imag = input[..., 1]
+    real = input[0, ...]
+    imag = input[1, ...]
 
     return cmplx(
         F.avg_pool3d(real, *args, **kwargs),
@@ -21,15 +21,15 @@ def avg_pool3d(input: ['n', 'f', 'hi', 'wi', 'di', 2],
     )
 
 @dimchecked
-def upsample_3d(input: ['n', 'f', 'hi', 'wi', 'di', 2],
+def upsample_3d(input: [2, 'n', 'f', 'hi', 'wi', 'di'],
                 scale_factor=2, align_corners=False
-               ) -> ['n', 'f', 'ho', 'wo', 'do', 2]:
+               ) ->    [2, 'n', 'f', 'ho', 'wo', 'do']:
     '''
         Spatial trilinear upsampling without mixing real and imaginary parts
     '''
 
-    real = input[..., 0]
-    imag = input[..., 1]
+    real = input[0, ...]
+    imag = input[1, ...]
 
     return cmplx(
         F.interpolate(

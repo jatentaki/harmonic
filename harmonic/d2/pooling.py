@@ -6,8 +6,8 @@ from torch_dimcheck import dimchecked
 from ..cmplx import cmplx 
 
 @dimchecked
-def avg_pool2d(input: ['n', 'f', 'hi', 'wi', 2],
-               *args, **kwargs) -> ['n', 'f', 'ho', 'wo', 2]:
+def avg_pool2d(input: [2, 'n', 'f', 'hi', 'wi'],
+               *args, **kwargs) -> [2, 'n', 'f', 'ho', 'wo']:
     '''
         Spatial average pooling without mixing real and imaginary parts
     '''
@@ -21,15 +21,15 @@ def avg_pool2d(input: ['n', 'f', 'hi', 'wi', 2],
     )
 
 @dimchecked
-def upsample_2d(input: ['n', 'f', 'hi', 'wi', 2],
+def upsample_2d(input: [2, 'n', 'f', 'hi', 'wi'],
                 scale_factor=2, align_corners=False
-               ) -> ['n', 'f', 'ho', 'wo', 2]:
+               ) -> [2, 'n', 'f', 'ho', 'wo']:
     '''
         Spatial bilinear upsampling without mixing real and imaginary parts
     '''
 
-    real = input[..., 0]
-    imag = input[..., 1]
+    real = input[0, ...]
+    imag = input[1, ...]
 
     return cmplx(
         F.interpolate(
