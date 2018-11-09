@@ -99,15 +99,25 @@ class Weights(nn.Module):
             Synthesize filters in polar coordinates. Grid is given by `angles` and
             `radii`, parameters by `betas` (phase offset) and `r` (radial profile)
         '''
+
+        # FIXME: until an upcoming PR by Adam Paszke jit fails with operations
+        # which depend on broadcasting. Therefore we have to manually call
+        # `expand` on all operands to allow jiting
+        f = self.total_channels
+        r = self.n_rings
+        a = self.n_angles
+
         real = torch.cos(
-            self.order * self.angles.reshape(1, 1, -1) + self.betas.unsqueeze(2)
+            self.order * self.angles.reshape(1, 1, -1).expand(f, r, a) +
+            self.betas.unsqueeze(2).expand(f, r, a)
         )
         imag = torch.sin(
-            self.order * self.angles.reshape(1, 1, -1) + self.betas.unsqueeze(2)
+            self.order * self.angles.reshape(1, 1, -1).expand(f, r, a) +
+            self.betas.unsqueeze(2).expand(f, r, a)
         )
 
-        real = real * self.r.unsqueeze(2)
-        imag = imag * self.r.unsqueeze(2)
+        real = real * self.r.unsqueeze(2).expand(f, r, a)
+        imag = imag * self.r.unsqueeze(2).expand(f, r, a)
 
         return cmplx(real, imag)
 
