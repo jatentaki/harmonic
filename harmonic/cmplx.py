@@ -3,7 +3,9 @@ from torch_dimcheck import dimchecked
 
 @dimchecked
 def magnitude(t: [2, ...], eps=1e-8) -> [...]:
-    return torch.sqrt(t.pow(2).sum(dim=0) + eps)
+    return torch.sqrt(eps + torch.abs(t).pow(2).sum(dim=0))
+#    return torch.norm(t, p=2, dim=0)
+#    return torch.sqrt(t.pow(2).sum(dim=0) + eps)
 
 @dimchecked
 def cmplx(real: [...], imag: [...]) -> [2, ...]:

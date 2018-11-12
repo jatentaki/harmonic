@@ -6,7 +6,7 @@ from torch_localize import localized_module
 from .cmplx import magnitude
 
 class _BatchNorm(nn.Module):
-    def __init__(self, repr, dim=2, eps=1e-2):
+    def __init__(self, repr, dim=2, eps=1e-4):
         super(_BatchNorm, self).__init__()
 
         if dim not in [2, 3]:

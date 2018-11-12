@@ -88,7 +88,7 @@ class Weights(nn.Module):
         # Gaussian with mean 0 and sigma = 2 / sqrt(n_contributing_pixels).
         
         n_contributing = self.total_channels * self.size ** 2
-        std = 2. / math.sqrt(n_contributing)
+        std = 0.75/ math.sqrt(n_contributing)
         nn.init.normal_(self.r, mean=0, std=std)
         nn.init.uniform_(self.betas, 0, 2 * math.pi)
 

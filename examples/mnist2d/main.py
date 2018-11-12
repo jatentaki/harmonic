@@ -44,7 +44,7 @@ layout = [
     (10, ),
 ]
 
-net = HNet(5, layout=layout)
+net = HNet(6, layout=layout)
 loss_fn = nn.CrossEntropyLoss()
 
 cuda = torch.cuda.is_available()
@@ -78,7 +78,7 @@ def accuracy(output, target, topk=(1,)):
 def unnormalize(x):
     return x * std + mean
 
-n_epochs = 20
+n_epochs = 6
 
 savedir = 'saves/'
 save_nr = 0
@@ -100,13 +100,14 @@ def save_one(x, predictions, epoch, batch, prefix=''):
 
     save_nr += 1
     
-print('tracing...')
-example = next(iter(train_loader))[0]
-if cuda:
-    example = example.cuda()
-net = torch.jit.trace(net, example)
-print('done')
+#print('tracing...')
+#example = next(iter(train_loader))[0]
+#if cuda:
+#    example = example.cuda()
+#net = torch.jit.trace(net, example)
+#print('done')
 
+results = []
 for epoch in range(n_epochs):
     with tqdm(total=len(train_loader), dynamic_ncols=True) as progress:
         mean_loss = AvgMeter()
@@ -129,6 +130,7 @@ for epoch in range(n_epochs):
             mean_acc.update(acc[0].item())
             progress.set_postfix(loss=mean_loss.avg, accuracy=mean_acc.avg)
             save_one(x, predictions, epoch, i, prefix='train')
+    train_avg = mean_acc.avg
 
     with torch.no_grad(), tqdm(total=len(test_loader), dynamic_ncols=True) as progress:
         mean_acc = AvgMeter()
@@ -145,4 +147,8 @@ for epoch in range(n_epochs):
             progress.set_postfix(accuracy=mean_acc.avg)
             save_one(x, predictions, epoch, i, prefix='test')
 
+    val_avg = mean_acc.avg
+    results.append((train_avg, val_avg))
     torch.save({'model': net.state_dict()}, 'e{}.pth.tar'.format(epoch))
+
+print(results)

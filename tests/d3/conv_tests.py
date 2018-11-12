@@ -29,12 +29,12 @@ class HConvTests(unittest.TestCase):
     def test_nonequivariance_z_y(self):
         for order in range(-4, 4):
             diff = self._diff_rotation(order, plane=(3, 5))
-            self.assertGreater(diff, 1)
+            self.assertGreater(diff, 1e-3)
 
     def test_nonequivariance_z_x(self):
         for order in range(-4, 4):
             diff = self._diff_rotation(order, plane=(3, 4))
-            self.assertGreater(diff, 1)
+            self.assertGreater(diff, 1e-3)
 
     def test_equivariance_single_stream(self):
         b, s, h, w, d = 3, 5, 20, 20, 20

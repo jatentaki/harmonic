@@ -36,7 +36,7 @@ def ords2s(in_ord, out_ord):
 
 
 class _HConv(nn.Module):
-    def __init__(self, in_repr, out_repr, size, radius=None, dim=2, pad=False):
+    def __init__(self, in_repr, out_repr, size, dim=2, pad=False):
         super(_HConv, self).__init__()
 
         if dim not in [2, 3]:
@@ -48,7 +48,7 @@ class _HConv(nn.Module):
         self.size = size
         self.pad = pad
 
-        self.radius = radius if radius is not None else size / 2 - 1
+        self.radius = size / 2 - 0.5
         self.weights = nn.ModuleDict()
 
         # 2d convolutions take features_in feature maps as input,
