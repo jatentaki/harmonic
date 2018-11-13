@@ -1,38 +1,45 @@
-import torch, random, imageio, os
+import torch, random, imageio, os, argparse
 import torch.nn as nn
 import torchvision as tv
 import torchvision.transforms as T
 import numpy as np
 from tqdm import tqdm
 
+import loader
 from hnet import HNet
+from baseline import BNet
 from utils import AvgMeter
-from harmonic.cmplx import magnitude
 
-from loader import Rotmnist
 
-mean = 0.13
-std = 0.3
+parser = argparse.ArgumentParser()
+parser.add_argument('model', choices=['hnet', 'baseline'])
+parser.add_argument('train', choices=['mnist', 'rotmnist'])
+parser.add_argument('-b', '--batch', type=int, default=250)
+parser.add_argument('-j', '--workers', type=int, default=1)
+
+args = parser.parse_args()
 
 normalize = T.Normalize((0.1307,), (0.3081,))
+def unnormalize(x):
+    return x * .3081 + .1307
 
-train_loader = torch.utils.data.DataLoader(
-    tv.datasets.MNIST(
+if args.train == 'mnist':
+    train_set = tv.datasets.MNIST(
         '../data', train=True, download=True,
         transform=T.Compose([
             T.ToTensor(),
             normalize
-        ])),
-    batch_size=250, shuffle=True, num_workers=1
+        ])
+    )
+elif args.train == 'rotmnist':
+    train_set = loader.Rotmnist('rotmnist/rotated_test.npz', transform=normalize),
+
+train_loader = torch.utils.data.DataLoader(
+    train_set, batch_size=args.batch, shuffle=True, num_workers=args.workers
 )
 
-#train_loader = torch.utils.data.DataLoader(
-#    Rotmnist('rotmnist/mnist.npz', transform=T.Normalize((mean, ), (std, ))),
-#    batch_size=250, shuffle=True
-#)
-
 test_loader = torch.utils.data.DataLoader(
-    Rotmnist('rotmnist/rotated_test.npz', transform=normalize),
+    loader.Rotmnist('rotmnist/rotated_test.npz', transform=normalize),
     batch_size=1000, shuffle=False
 )
 
@@ -44,7 +51,11 @@ layout = [
     (10, ),
 ]
 
-net = HNet(5, layout=layout)
+if args.model == 'hnet':
+    net = HNet(5, layout=layout)
+elif args.model == 'baseline':
+    net = BNet(5, layout=layout)
+
 loss_fn = nn.CrossEntropyLoss()
 
 cuda = torch.cuda.is_available()
@@ -74,9 +85,6 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
     return res
-
-def unnormalize(x):
-    return x * std + mean
 
 n_epochs = 20
 
@@ -112,7 +120,7 @@ for epoch in range(n_epochs):
         mean_loss = AvgMeter()
         mean_acc = AvgMeter()
         for i, (x, y) in enumerate(train_loader):
-            x, y = x.clone(), y.clone()
+#            x, y = x.clone(), y.clone()
             if cuda:
                 x, y = x.cuda(), y.cuda()
 
@@ -133,7 +141,7 @@ for epoch in range(n_epochs):
     with torch.no_grad(), tqdm(total=len(test_loader), dynamic_ncols=True) as progress:
         mean_acc = AvgMeter()
         for i, (x, y) in enumerate(test_loader):
-            x, y = x.clone(), y.clone()
+#            x, y = x.clone(), y.clone()
             if cuda:
                 x, y = x.cuda(), y.cuda()
 
