@@ -3,7 +3,7 @@ import numpy as np
 import torchvision as tv
 import torchvision.transforms as T
 
-class Rotmnist(torch.utils.data.DataLoader):
+class Rotmnist(torch.utils.data.Dataset):
     def __init__(self, path, transform=T.Compose([])):
         data = np.load(path)
         self.transform = transform

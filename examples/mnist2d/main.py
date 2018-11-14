@@ -32,7 +32,7 @@ if args.train == 'mnist':
         ])
     )
 elif args.train == 'rotmnist':
-    train_set = loader.Rotmnist('rotmnist/rotated_test.npz', transform=normalize),
+    train_set = loader.Rotmnist('rotmnist/rotated_train.npz', transform=normalize)
 
 train_loader = torch.utils.data.DataLoader(
     train_set, batch_size=args.batch, shuffle=True, num_workers=args.workers
@@ -40,12 +40,13 @@ train_loader = torch.utils.data.DataLoader(
 
 test_loader = torch.utils.data.DataLoader(
     loader.Rotmnist('rotmnist/rotated_test.npz', transform=normalize),
-    batch_size=1000, shuffle=False
+    batch_size=args.batch, shuffle=False
 )
 
 layout = [
     (1, ),
-    (5, 5, 5),
+    (2, 5, 3, 3, 2),
+#    (5, 5, 5),
     (5, 5, 5),
     (5, 5, 5),
     (10, ),

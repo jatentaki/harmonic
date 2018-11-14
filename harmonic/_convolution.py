@@ -2,7 +2,7 @@ import torch, itertools, math
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_localize import localized_module
-from torch_dimcheck import dimchecked, ShapeChecker
+from torch_dimcheck import dimchecked
 
 from .cmplx import cmplx 
 from .weights import Weights
@@ -102,4 +102,9 @@ class _HConv(nn.Module):
         return torch.cat(input_kernels, dim=2)
         
     def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
+        if x.shape[2] != sum(self.in_repr):
+            fmt = "Based on repr {} expected {} feature maps, found {}"
+            msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
+            raise ValueError(msg)
+
         return cconv_nd(x, self.synthesize(), dim=self.dim, pad=self.pad)
