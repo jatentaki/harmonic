@@ -12,8 +12,8 @@ def avg_pool2d(input: [2, 'n', 'f', 'hi', 'wi'],
         Spatial average pooling without mixing real and imaginary parts
     '''
 
-    real = input[..., 0]
-    imag = input[..., 1]
+    real = input[0, ...]
+    imag = input[1, ...]
 
     return cmplx(
         F.avg_pool2d(real, *args, **kwargs),
