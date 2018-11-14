@@ -76,7 +76,7 @@ class _HConv(nn.Module):
             )
             self.weights[ords2s(in_ord, out_ord)] = weight 
 
-    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
+    def synthesize(self) -> [2, 'fo', 'fi', 'h', 'w', ...]:
         spatial_unsqueeze = [self.size] * self.dim
 
         input_kernels = []
@@ -99,6 +99,7 @@ class _HConv(nn.Module):
 
             input_kernels.append(torch.cat(output_kernels, dim=1))
 
-        kernels = torch.cat(input_kernels, dim=2)
-
-        return cconv_nd(x, kernels, dim=self.dim, pad=self.pad)
+        return torch.cat(input_kernels, dim=2)
+        
+    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
+        return cconv_nd(x, self.synthesize(), dim=self.dim, pad=self.pad)
