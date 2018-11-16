@@ -10,7 +10,7 @@ from .weights import Weights
 @dimchecked
 def cconv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
              w: [2, 'f_out', 'f_in', 'hk', 'wk', ...,],
-             dim=2, pad=False) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
+             dim=2, pad=False, transpose=False) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
 
     if dim not in [2, 3]:
         raise ValueError("Dim can only be 2 or 3, got {}".format(dim))
@@ -20,7 +20,11 @@ def cconv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
     else:
         padding = 0
 
-    conv = F.conv3d if dim == 3 else F.conv2d
+    if transpose:
+        w = w.transpose(1, 2)
+        conv = F.conv_transpose3d if dim == 3 else F.conv_transpose2d
+    else:
+        conv = F.conv3d if dim == 3 else F.conv2d
 
     real = conv(x[0, ...], w[0, ...], padding=padding) - \
            conv(x[1, ...], w[1, ...], padding=padding)
@@ -36,7 +40,8 @@ def ords2s(in_ord, out_ord):
 
 
 class _HConv(nn.Module):
-    def __init__(self, in_repr, out_repr, size, radius=None, dim=2, pad=False):
+    def __init__(self, in_repr, out_repr, size, radius=None, dim=2,
+                 pad=False, transpose=False):
         super(_HConv, self).__init__()
 
         if dim not in [2, 3]:
@@ -47,6 +52,7 @@ class _HConv(nn.Module):
         self.out_repr = out_repr
         self.size = size
         self.pad = pad
+        self._transpose = transpose
 
         self.radius = radius if radius is not None else size / 2 - 1
         self.weights = nn.ModuleDict()
@@ -107,4 +113,4 @@ class _HConv(nn.Module):
             msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
             raise ValueError(msg)
 
-        return cconv_nd(x, self.synthesize(), dim=self.dim, pad=self.pad)
+        return cconv_nd(x, self.synthesize(), dim=self.dim, pad=self.pad, transpose=self._transpose)
