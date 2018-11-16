@@ -1,8 +1,8 @@
 import torch, unittest
-from harmonic.d2 import HConvTranspose2d
+from harmonic.d2 import HConvTranspose2d, HConv2d
 from utils import rot90
 
-class HConvTests(unittest.TestCase):
+class HConvTranspTests(unittest.TestCase):
     def test_equivariance_0(self):
         self._test_equivariance(0)
 
@@ -131,5 +131,53 @@ class HConvTests(unittest.TestCase):
         diff = (rot90(base_fwd) - rot_fwd).max().item()
         
         self.assertLess(diff, 1e-3)
+
+class HConvInteractionTests(unittest.TestCase):
+    def test_equivariance_0(self):
+        self._test_equivariance(0)
+
+    def test_equivariance_1(self):
+        self._test_equivariance(1)
+
+    def test_equivariance_2(self):
+        self._test_equivariance(2)
+
+    def test_equivariance_3(self):
+        self._test_equivariance(3)
+
+    def test_equivariance_4(self):
+        self._test_equivariance(4)
+
+    def test_equivariance_m1(self):
+        self._test_equivariance(-1)
+
+    def test_equivariance_m2(self):
+        self._test_equivariance(-2)
+
+    def test_equivariance_m3(self):
+        self._test_equivariance(-3)
+
+    def test_equivariance_m4(self):
+        self._test_equivariance(-4)
+
+    def _test_equivariance(self, order):
+        b, s, c1, c2, h, w = 5, 7, 5, 10, 30, 30
+        repr1 = [c1]
+        repr2 = [0] * (order - 1) + [c2]
+
+        conv1 = HConv2d(repr1, repr2, s).double()
+        conv2 = HConvTranspose2d(repr2, repr1, s).double()
+
+        inp = torch.randn(2, b, c1, h, w, dtype=torch.float64)
+        rot = rot90(inp)
+
+        base_fwd = conv2(conv1(inp))
+        rot_fwd = conv2(conv1(rot))
+
+        self.assertEqual(inp.shape, base_fwd.shape)
+
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
+        
+        self.assertLess(diff, 1e-5)
 
 unittest.main()

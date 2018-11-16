@@ -10,15 +10,10 @@ from .weights import Weights
 @dimchecked
 def cconv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
              w: [2, 'f_out', 'f_in', 'hk', 'wk', ...,],
-             dim=2, pad=False, transpose=False) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
+             dim=2, transpose=False, **kwargs) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
 
     if dim not in [2, 3]:
         raise ValueError("Dim can only be 2 or 3, got {}".format(dim))
-
-    if pad:
-        padding = w.shape[3] // 2
-    else:
-        padding = 0
 
     if transpose:
         w = w.transpose(1, 2)
@@ -26,11 +21,11 @@ def cconv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
     else:
         conv = F.conv3d if dim == 3 else F.conv2d
 
-    real = conv(x[0, ...], w[0, ...], padding=padding) - \
-           conv(x[1, ...], w[1, ...], padding=padding)
+    real = conv(x[0, ...], w[0, ...], **kwargs) - \
+           conv(x[1, ...], w[1, ...], **kwargs)
 
-    imag = conv(x[0, ...], w[1, ...], padding=padding) + \
-           conv(x[1, ...], w[0, ...], padding=padding)
+    imag = conv(x[0, ...], w[1, ...], **kwargs) + \
+           conv(x[1, ...], w[0, ...], **kwargs)
 
     return cmplx(real, imag)
 
@@ -40,8 +35,8 @@ def ords2s(in_ord, out_ord):
 
 
 class _HConv(nn.Module):
-    def __init__(self, in_repr, out_repr, size, radius=None, dim=2,
-                 pad=False, transpose=False):
+    def __init__(self, in_repr, out_repr, size, radius=None, dim=2, transpose=False,
+                 conv_kwargs=dict()):
         super(_HConv, self).__init__()
 
         if dim not in [2, 3]:
@@ -51,8 +46,8 @@ class _HConv(nn.Module):
         self.in_repr = in_repr
         self.out_repr = out_repr
         self.size = size
-        self.pad = pad
         self._transpose = transpose
+        self._conv_kwargs = conv_kwargs
 
         self.radius = radius if radius is not None else size / 2 - 1
         self.weights = nn.ModuleDict()
@@ -113,4 +108,7 @@ class _HConv(nn.Module):
             msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
             raise ValueError(msg)
 
-        return cconv_nd(x, self.synthesize(), dim=self.dim, pad=self.pad, transpose=self._transpose)
+        return cconv_nd(
+            x, self.synthesize(), dim=self.dim,
+            transpose=self._transpose, **self._conv_kwargs
+        )
