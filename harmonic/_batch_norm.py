@@ -38,3 +38,8 @@ class _BatchNorm(nn.Module):
         std_corrected = mean_corrected / stds.reshape(1, 1, -1, *spatial)
 
         return std_corrected
+
+    def __repr__(self):
+        fmt = 'BatchNorm{}d(repr={}, eps={})'
+        msg = fmt.format(self.dim, self.repr, self.eps)
+        return msg

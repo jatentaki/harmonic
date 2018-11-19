@@ -29,3 +29,8 @@ class _ScalarGate(nn.Module):
         g = torch.sigmoid(g)
 
         return x * g.unsqueeze(0)
+
+    def __repr__(self):
+        fmt = 'ScalarGate{}d(repr={})'
+        msg = fmt.format(self.dim, self.repr)
+        return msg

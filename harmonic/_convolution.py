@@ -76,6 +76,13 @@ class _HConv(nn.Module):
             )
             self.weights[ords2s(in_ord, out_ord)] = weight 
 
+    def __repr__(self):
+        fmt = 'HConv{}d(repr_in={}, repr_out={}, size={}, radius={})'
+        msg = fmt.format(
+            self.dim, self.in_repr, self.out_repr, self.size, self.radius
+        )
+        return msg
+
     def synthesize(self) -> [2, 'fo', 'fi', 'h', 'w', ...]:
         spatial_unsqueeze = [self.size] * self.dim
 
@@ -101,7 +108,8 @@ class _HConv(nn.Module):
 
         return torch.cat(input_kernels, dim=2)
         
-    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
+    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]
+               ) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
         if x.shape[2] != sum(self.in_repr):
             fmt = "Based on repr {} expected {} feature maps, found {}"
             msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
