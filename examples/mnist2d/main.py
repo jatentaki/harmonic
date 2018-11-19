@@ -121,7 +121,6 @@ for epoch in range(n_epochs):
         mean_loss = AvgMeter()
         mean_acc = AvgMeter()
         for i, (x, y) in enumerate(train_loader):
-#            x, y = x.clone(), y.clone()
             if cuda:
                 x, y = x.cuda(), y.cuda()
 
@@ -142,7 +141,6 @@ for epoch in range(n_epochs):
     with torch.no_grad(), tqdm(total=len(test_loader), dynamic_ncols=True) as progress:
         mean_acc = AvgMeter()
         for i, (x, y) in enumerate(test_loader):
-#            x, y = x.clone(), y.clone()
             if cuda:
                 x, y = x.cuda(), y.cuda()
 
