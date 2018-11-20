@@ -10,9 +10,9 @@ def complex_conv(x: [2, 'b',     'f_in', 'hx', 'wx'],
 
 
 class HConv2d(_HConv):
-    def __init__(self, in_repr, out_repr, radius, pad=False):
+    def __init__(self, in_repr, out_repr, size, radius=None, pad=False):
         super(HConv2d, self).__init__(
-            in_repr, out_repr, radius, pad=pad, dim=2
+            in_repr, out_repr, size, pad=pad, dim=2, radius=radius
         )
 
     @dimchecked
