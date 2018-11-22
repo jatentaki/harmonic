@@ -2,12 +2,19 @@ import torch
 from torch_dimcheck import dimchecked
 
 @dimchecked
+def magnitude_sqr(t: [2, ...]) -> [...]:
+    return t.pow(2).sum(dim=0)
+
+
+@dimchecked
 def magnitude(t: [2, ...], eps=1e-8) -> [...]:
-    return torch.sqrt(t.pow(2).sum(dim=0) + eps)
+    return torch.sqrt(magnitude_sqr(t) + eps)
+
 
 @dimchecked
 def cmplx(real: [...], imag: [...]) -> [2, ...]:
     return torch.stack([real, imag], dim=0)
+
 
 @dimchecked
 def from_real(real: [...]) -> [2, ...]:

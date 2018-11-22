@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from torch_localize import localized_module
 
-from .cmplx import magnitude
+from .cmplx import magnitude, magnitude_sqr
 
 class _Normalization(nn.Module):
     def __init__(self, repr, dim=2, eps=1e-2, kind='batch'):
@@ -35,20 +35,21 @@ class _Normalization(nn.Module):
         elif self._kind == 'instance':
             batch_dim = x.shape[1]
 
+        # transpose such that we can reduce over batches (in case of batch
+        # norm) while keeping feature channels separate, then flatten
+        # the spatial + (in case of batch norm) batch dimensions
         flat = x.transpose(1, 2).reshape(2, self.n_features * batch_dim, -1)
 
-        # compute mean
+        # compute mean and std
         means = flat.mean(dim=2, keepdim=True)
+        mean_corrected = flat - means
 
-        # compute std
-        stds = magnitude(flat - means).std(dim=1) + self.eps
+        stds = magnitude(mean_corrected).std(dim=1, keepdim=True)
+        std_corrected = mean_corrected / stds.unsqueeze(0)
 
-        spatial = [1] * self._dim
-
-        mean_corrected = x - means.reshape(2, batch_dim, -1, *spatial)
-        std_corrected = mean_corrected / stds.reshape(1, batch_dim, -1, *spatial)
-
-        return std_corrected
+        # recover the transposed shape then transpose back into the original shape
+        transposed_shape = (2, x.shape[2], x.shape[1], *x.shape[3:])
+        return std_corrected.reshape(*transposed_shape).transpose(1, 2)
 
     def __repr__(self):
         fmt = '{}Norm{}d(repr={}, eps={})'
