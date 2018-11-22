@@ -44,7 +44,7 @@ class _Normalization(nn.Module):
         means = flat.mean(dim=2, keepdim=True)
         mean_corrected = flat - means
 
-        stds = magnitude(mean_corrected).std(dim=1, keepdim=True)
+        stds = magnitude(mean_corrected).std(dim=1, keepdim=True) + self.eps
         std_corrected = mean_corrected / stds.unsqueeze(0)
 
         # recover the transposed shape then transpose back into the original shape
