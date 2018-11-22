@@ -1,12 +1,12 @@
 import torch, unittest
-from harmonic.d3 import BatchNorm3d
+from harmonic.d3 import InstanceNorm3d
 from utils import rot90
 
-class BNormTests(unittest.TestCase):
+class INormTests(unittest.TestCase):
     def test_equivariance_eval(self):
         b, h, w, d = 5, 30, 30, 30
         repr = (2, 3)
-        bnorm = BatchNorm3d(repr).double()
+        bnorm = InstanceNorm3d(repr).double()
 
         inp = torch.randn(2, b, sum(repr), h, w, d, dtype=torch.float64)
         rot = rot90(inp)
@@ -21,7 +21,7 @@ class BNormTests(unittest.TestCase):
     def test_equivariance_train(self):
         b, h, w, d = 5, 30, 30, 30
         repr = (2, 3)
-        bnorm = BatchNorm3d(repr).double()
+        bnorm = InstanceNorm3d(repr).double()
 
         inp = torch.randn(2, b, sum(repr), h, w, d, dtype=torch.float64)
         rot = rot90(inp)
