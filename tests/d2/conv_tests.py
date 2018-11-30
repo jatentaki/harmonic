@@ -132,4 +132,23 @@ class HConvTests(unittest.TestCase):
         
         self.assertLess(diff, 1e-3)
 
+class RelaxationTests(unittest.TestCase):
+    def test_relaxation_multi_stream(self):
+        b, r, h, w = 5, 7, 50, 50
+
+        rep1 = (2, 3)
+        rep2 = (1, 2, 3)
+
+        inp = torch.randn(2, b, sum(rep1), h, w, dtype=torch.float64)
+
+        hconv = HConv2d(rep1, rep2, r)
+        h_params = sum(p.numel() for p in hconv.parameters())
+        h_fwd = hconv(inp)
+        cconv = hconv.relax()
+        c_params = sum(p.numel() for p in cconv.parameters())
+        c_fwd = cconv(inp)
+
+        self.assertTrue(torch.allclose(h_fwd, c_fwd))
+        self.assertGreater(c_params, h_params)
+
 unittest.main()

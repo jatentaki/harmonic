@@ -35,12 +35,63 @@ def ords2s(in_ord, out_ord):
     return '{}_{}'.format(in_ord, out_ord)
 
 
+@localized_module
 class _HConv(nn.Module):
     def __init__(self, in_repr, out_repr, size, radius=None, dim=2, pad=False):
         super(_HConv, self).__init__()
 
         if dim not in [2, 3]:
             raise ValueError("Dim can only be 2 or 3, got {}".format(dim))
+
+        self.dim = dim
+        self.in_repr = in_repr
+        self.out_repr = out_repr
+        self.size = size
+        self.pad = pad
+
+        self.constrained = True
+        self.conv = _HConvConstr(in_repr, out_repr, size, radius=None, dim=2)
+
+        self.radius = self.conv.radius
+
+
+    def relax(self):
+        '''
+        remove the constraints on convolution kernels, essentially replacing the
+        layer with a regular 2/3d convolution computed on complex numbers
+        and initialized to the current state of this layer
+        '''
+        
+        if not self.constrained:
+            raise ValueError("Attempting to relax a relaxed HConv")
+
+        conv = _RelaxedHConv(self.conv)
+        del self.conv
+        self.conv = conv
+
+    def __repr__(self):
+        fmt = '{}HConv{}d(repr_in={}, repr_out={}, size={}, radius={})'
+        msg = fmt.format(
+            'Constr' if self.constrained else 'Relaxed',
+            self.dim, self.in_repr, self.out_repr, self.size, self.radius
+        )
+        return msg
+
+
+    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]
+               ) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
+        if x.shape[2] != sum(self.in_repr):
+            fmt = "Based on repr {} expected {} feature maps, found {}"
+            msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
+            raise ValueError(msg)
+
+        return cconv_nd(x, self.conv.synthesize(), dim=self.dim, pad=self.pad)
+        
+
+@localized_module
+class _HConvConstr(nn.Module):
+    def __init__(self, in_repr, out_repr, size, radius=None, dim=2, pad=False):
+        super(_HConvConst, self).__init__()
 
         self.dim = dim
         self.in_repr = in_repr
@@ -77,11 +128,12 @@ class _HConv(nn.Module):
             self.weights[ords2s(in_ord, out_ord)] = weight 
 
     def __repr__(self):
-        fmt = 'HConv{}d(repr_in={}, repr_out={}, size={}, radius={})'
+        fmt = '_HConvConstr{}d(repr_in={}, repr_out={}, size={}, radius={})'
         msg = fmt.format(
             self.dim, self.in_repr, self.out_repr, self.size, self.radius
         )
         return msg
+
 
     def synthesize(self) -> [2, 'fo', 'fi', 'h', 'w', ...]:
         spatial_unsqueeze = [self.size] * self.dim
@@ -108,11 +160,25 @@ class _HConv(nn.Module):
 
         return torch.cat(input_kernels, dim=2)
         
-    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]
-               ) -> [2, 'b', 'fo', 'ho', 'wo', ...]:
-        if x.shape[2] != sum(self.in_repr):
-            fmt = "Based on repr {} expected {} feature maps, found {}"
-            msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
-            raise ValueError(msg)
 
-        return cconv_nd(x, self.synthesize(), dim=self.dim, pad=self.pad)
+@localized_module
+class _RelaxedHConv(nn.Module):
+    def __init__(self, conv_constr):
+        kernel = conv_constr.synthesize()
+        self.kernel = nn.Parameter(conv_constr.synthesize().detach())
+
+        self.dim = conv_constr.dim
+        self.in_repr = conv_constr.in_repr
+        self.out_repr = conv_constr.out_repr
+        self.size = conv_constr.size
+        self.radius = conv_constr.radius
+
+    def synthesize(self) -> [2, 'fo', 'fi', 'h', 'w', ...]:
+        return self.kernel
+
+    def __repr__(self):
+        fmt = '_RelaxedHConv{}d(repr_in={}, repr_out={}, size={}, radius={})'
+        msg = fmt.format(
+            self.dim, self.in_repr, self.out_repr, self.size, self.radius
+        )
+        return msg
