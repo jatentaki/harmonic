@@ -139,7 +139,7 @@ class RelaxationTests(unittest.TestCase):
         rep1 = (2, 3)
         rep2 = (1, 2, 3)
 
-        inp = torch.randn(2, b, sum(rep1), h, w, dtype=torch.float64)
+        inp = torch.randn(2, b, sum(rep1), h, w)
 
         hconv = HConv2d(rep1, rep2, r)
         h_params = sum(p.numel() for p in hconv.parameters())

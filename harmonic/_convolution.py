@@ -69,6 +69,8 @@ class _HConv(nn.Module):
         del self.conv
         self.conv = conv
 
+        return self
+
     def __repr__(self):
         fmt = '{}HConv{}d(repr_in={}, repr_out={}, size={}, radius={})'
         msg = fmt.format(
@@ -91,7 +93,7 @@ class _HConv(nn.Module):
 @localized_module
 class _HConvConstr(nn.Module):
     def __init__(self, in_repr, out_repr, size, radius=None, dim=2, pad=False):
-        super(_HConvConst, self).__init__()
+        super(_HConvConstr, self).__init__()
 
         self.dim = dim
         self.in_repr = in_repr
@@ -164,6 +166,8 @@ class _HConvConstr(nn.Module):
 @localized_module
 class _RelaxedHConv(nn.Module):
     def __init__(self, conv_constr):
+        super(_RelaxedHConv, self).__init__()
+
         kernel = conv_constr.synthesize()
         self.kernel = nn.Parameter(conv_constr.synthesize().detach())
 
