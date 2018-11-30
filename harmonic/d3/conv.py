@@ -1,12 +1,12 @@
 from torch_dimcheck import dimchecked
 
-from .._convolution import _HConv, cconv_nd
+from .._convolution import _HConv#, cconv_nd
 
-@dimchecked
-def complex_conv(x: [2, 'b',     'f_in', 'hx', 'wx', 'dx'],
-                 w: [2, 'f_out', 'f_in', 'hk', 'wk', 'dk'],
-                 pad=False) -> [2, 'b', 'f_out', 'ho', 'wo', 'do']:
-    return cconv_nd(x, w, pad=pad, dim=3)
+#@dimchecked
+#def complex_conv(x: [2, 'b',     'f_in', 'hx', 'wx', 'dx'],
+#                 w: [2, 'f_out', 'f_in', 'hk', 'wk', 'dk'],
+#                 pad=False) -> [2, 'b', 'f_out', 'ho', 'wo', 'do']:
+#    return cconv_nd(x, w, pad=pad, dim=3)
 
 
 class HConv3d(_HConv):

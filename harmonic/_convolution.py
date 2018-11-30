@@ -1,34 +1,10 @@
 import torch, itertools, math
 import torch.nn as nn
-import torch.nn.functional as F
 from torch_localize import localized_module
 from torch_dimcheck import dimchecked
 
-from .cmplx import cmplx 
+from .cmplx import cmplx, conv_nd
 from .weights import Weights
-
-@dimchecked
-def cconv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
-             w: [2, 'f_out', 'f_in', 'hk', 'wk', ...,],
-             dim=2, pad=False) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
-
-    if dim not in [2, 3]:
-        raise ValueError("Dim can only be 2 or 3, got {}".format(dim))
-
-    if pad:
-        padding = w.shape[3] // 2
-    else:
-        padding = 0
-
-    conv = F.conv3d if dim == 3 else F.conv2d
-
-    real = conv(x[0, ...], w[0, ...], padding=padding) - \
-           conv(x[1, ...], w[1, ...], padding=padding)
-
-    imag = conv(x[0, ...], w[1, ...], padding=padding) + \
-           conv(x[1, ...], w[0, ...], padding=padding)
-
-    return cmplx(real, imag)
 
 
 def ords2s(in_ord, out_ord):
@@ -50,7 +26,7 @@ class _HConv(nn.Module):
         self.pad = pad
 
         self.constrained = True
-        self.conv = _HConvConstr(in_repr, out_repr, size, radius=None, dim=2)
+        self.conv = _HConvConstr(in_repr, out_repr, size, radius=None, dim=dim)
 
         self.radius = self.conv.radius
 
@@ -87,7 +63,7 @@ class _HConv(nn.Module):
             msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
             raise ValueError(msg)
 
-        return cconv_nd(x, self.conv.synthesize(), dim=self.dim, pad=self.pad)
+        return conv_nd(x, self.conv.synthesize(), dim=self.dim, pad=self.pad)
         
 
 @localized_module
