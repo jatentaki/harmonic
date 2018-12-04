@@ -8,7 +8,7 @@ class BNormTests(unittest.TestCase):
         b, h, w = 5, 30, 30
 
         repr = (2, 3)
-        bnorm = BatchNorm2d(repr)
+        bnorm = BatchNorm2d(repr, eps=0.)
 
         inp = torch.randn(2, b, sum(repr), h, w)
         feature_means = torch.randn(5).reshape(1, 1, -1, 1, 1)
