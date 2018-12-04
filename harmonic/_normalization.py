@@ -4,9 +4,10 @@ import torch.nn as nn
 from torch_localize import localized_module
 
 from .cmplx import magnitude, magnitude_sqr
+from .multidim import std, mean
 
 class _Normalization(nn.Module):
-    def __init__(self, repr, dim=2, eps=1e-2, kind='batch'):
+    def __init__(self, repr, dim=2, eps=1e-3, kind='batch'):
         super(_Normalization, self).__init__()
 
         if dim not in [2, 3]:
@@ -30,26 +31,19 @@ class _Normalization(nn.Module):
             msg = fmt.format(x.shape[2], self.n_features, tuple(self.repr))
             raise ValueError(msg)
 
+        reduce_dims = [3, 4]
         if self._kind == 'batch':
-            batch_dim = 1
-        elif self._kind == 'instance':
-            batch_dim = x.shape[1]
+            reduce_dims.append(1)
+        if self._dim == 3:
+            reduce_dims.append(5)
 
-        # transpose such that we can reduce over batches (in case of batch
-        # norm) while keeping feature channels separate, then flatten
-        # the spatial + (in case of batch norm) batch dimensions
-        flat = x.transpose(1, 2).reshape(2, self.n_features * batch_dim, -1)
+        means = mean(x, dim=reduce_dims, keepdim=True)
+        x = x - means
 
-        # compute mean and std
-        means = flat.mean(dim=2, keepdim=True)
-        mean_corrected = flat - means
+        stds = std(magnitude(x), dim=[d-1 for d in reduce_dims], keepdim=True)
+        x = x / (stds.unsqueeze(0) + self.eps)
 
-        stds = magnitude(mean_corrected).std(dim=1, keepdim=True) + self.eps
-        std_corrected = mean_corrected / stds.unsqueeze(0)
-
-        # recover the transposed shape then transpose back into the original shape
-        transposed_shape = (2, x.shape[2], x.shape[1], *x.shape[3:])
-        return std_corrected.reshape(*transposed_shape).transpose(1, 2)
+        return x
 
     def __repr__(self):
         fmt = '{}Norm{}d(repr={}, eps={})'

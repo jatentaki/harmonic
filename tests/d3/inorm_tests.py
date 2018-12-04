@@ -28,9 +28,10 @@ class INormTests(unittest.TestCase):
                 mag = mags[batch_item, feature, ...]
                 val = out[:, batch_item, feature, ...]
 
-                diff_std = torch.abs(mag.std() - 1.)
                 diff_mean = torch.abs(val.mean())
                 self.assertLess(diff_mean.item(), 0.1)
+
+                diff_std = torch.abs(mag.std() - 1.)
                 self.assertLess(diff_std.item(), 0.1)
 
     def test_equivariance_eval(self):

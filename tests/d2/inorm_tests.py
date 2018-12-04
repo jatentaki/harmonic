@@ -11,9 +11,9 @@ class INormTests(unittest.TestCase):
         inorm = InstanceNorm2d(repr)
 
         inp = torch.randn(2, b, sum(repr), h, w)
-        feature_means = torch.randn(5).reshape(1, 1, -1, 1, 1)
+        feature_means = torch.randn(sum(repr)).reshape(1, 1, -1, 1, 1)
         batch_means = torch.randn(b).reshape(1, -1, 1, 1, 1)
-        feature_stds = torch.randn(5).reshape(1, 1, -1, 1, 1)
+        feature_stds = torch.randn(sum(repr)).reshape(1, 1, -1, 1, 1)
         batch_stds = torch.randn(b).reshape(1, -1, 1, 1, 1)
         inp *= feature_stds
         inp *= batch_stds
@@ -28,11 +28,11 @@ class INormTests(unittest.TestCase):
                 mag = mags[batch_item, feature, ...]
                 val = out[:, batch_item, feature, ...]
 
-                diff_std = torch.abs(mag.std() - 1.)
                 diff_mean = torch.abs(val.mean())
                 self.assertLess(diff_mean.item(), 0.1)
-                self.assertLess(diff_std.item(), 0.1)
 
+                diff_std = torch.abs(mag.std() - 1.)
+                self.assertLess(diff_std.item(), 0.1)
 
     def test_equivariance_eval(self):
         b, h, w = 5, 30, 30
