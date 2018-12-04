@@ -85,8 +85,8 @@ class Weights(nn.Module):
         dist2 = x_dist.pow(2).unsqueeze(0) + y_dist.pow(2).unsqueeze(1)
 
         # evaluate Gaussian function on distances
-        norm = 1 / math.sqrt(2 * math.pi * sigma ** 2)
-        gauss_interp = torch.exp(- dist2 / (2 * sigma ** 2)) / norm
+        gauss_interp = torch.exp(- dist2 / (2 * sigma ** 2))
+        gauss_interp /= gauss_interp.sum(dim=(2, 3), keepdim=True)
 
         return gauss_interp
 
@@ -100,8 +100,8 @@ class Weights(nn.Module):
         dist2 = xs.pow(2) + ys.pow(2)
 
         # evaluate Gaussian function on distances
-        norm = 1 / math.sqrt(2 * math.pi * sigma ** 2)
-        gauss_center = torch.exp(- dist2 / (2 * sigma ** 2)) / norm
+        gauss_center = torch.exp(- dist2 / (2 * sigma ** 2))
+        gauss_center /= gauss_center.sum()
 
         return gauss_center
 
