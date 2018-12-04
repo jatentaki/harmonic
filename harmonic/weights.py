@@ -23,16 +23,23 @@ class Weights(nn.Module):
         self.n_rings = int(math.ceil(self.radius)) + 1
         self.n_angles = 4 * (size - 1)
 
+        self.center = nn.Parameter(
+            # the r=0 element is special-cased because it has ill-defined angles.
+            # self.radial and self.angular consider only the remaining elements
+            torch.randn(self.total_channels, requires_grad=True)
+        )
         self.radial = nn.Parameter(
-            torch.randn(self.total_channels, self.n_rings, requires_grad=True)
+            torch.randn(self.total_channels, self.n_rings - 1, requires_grad=True)
         )
         self.angular = nn.Parameter(
-            torch.randn(self.total_channels, self.n_rings, requires_grad=True)
+            torch.randn(self.total_channels, self.n_rings - 1, requires_grad=True)
         )
 
         self.precompute_grid()
-        gauss_interp = self.precompute_gaussian()
-        self.register_buffer('gauss_interp', gauss_interp)
+        self.register_buffer('gauss_interp', self.precompute_gaussian())
+
+        gauss_center = self.precompute_center().reshape(1, 1, self.size, self.size)
+        self.register_buffer('gauss_center', gauss_center)
 
         if initialize:
             self.initialize_weights()
@@ -42,7 +49,8 @@ class Weights(nn.Module):
         # note: we need to sample angles in [0, 2*pi) thus we take 1 more
         # sample than necessary and discard it
         angular_grid = torch.linspace(0, 2 * math.pi, self.n_angles + 1)[:-1]
-        radial_grid = torch.linspace(0, self.radius, self.n_rings)
+        # note: we drop the first radial item since it's special-cased
+        radial_grid = torch.linspace(0, self.radius, self.n_rings)[1:]
     
         self.register_buffer('angular_grid', angular_grid)
         self.register_buffer('radial_grid', radial_grid)
@@ -51,9 +59,9 @@ class Weights(nn.Module):
     @dimchecked
     def precompute_gaussian(self, sigma=0.5) -> ['d', 'd', 'nw', 'na']:
         '''
-            Build a [self.size, self.size, self.n_rings, self.n_angles] matrix
+            Build a [self.size, self.size, self.n_rings - 1, self.n_angles] matrix
             which interpolates kernel coordinates from radial to Cartesian
-            by means of Gaussian interpolation
+            by means of Gaussian interpolation. The r=0 element is omitted
         '''
 
         # compute cartesian coordinates of each polar grid point
@@ -75,13 +83,27 @@ class Weights(nn.Module):
         # coordinate systems of shape
         # [self.size, self.size, self.n_rings, self.n_angles]
         dist2 = x_dist.pow(2).unsqueeze(0) + y_dist.pow(2).unsqueeze(1)
-        dist = torch.sqrt(dist2)
 
         # evaluate Gaussian function on distances
         norm = 1 / math.sqrt(2 * math.pi * sigma ** 2)
-        gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2)) / norm
+        gauss_interp = torch.exp(- dist2 / (2 * sigma ** 2)) / norm
 
-        return gauss 
+        return gauss_interp
+
+    @dimchecked
+    def precompute_center(self, sigma=0.5) -> ['d', 'd']:
+        # create coordinates
+        xs = torch.linspace(-self.size / 2, self.size / 2, self.size).reshape(-1, 1)
+        ys = xs.reshape(1, -1)
+        
+        # compute distance
+        dist2 = xs.pow(2) + ys.pow(2)
+
+        # evaluate Gaussian function on distances
+        norm = 1 / math.sqrt(2 * math.pi * sigma ** 2)
+        gauss_center = torch.exp(- dist2 / (2 * sigma ** 2)) / norm
+
+        return gauss_center
 
 
     def initialize_weights(self):
@@ -91,6 +113,7 @@ class Weights(nn.Module):
         
         n_contributing = self.total_channels * self.size ** 2
         std = 2. / math.sqrt(n_contributing)
+        nn.init.normal_(self.center, mean=0, std=std)
         nn.init.normal_(self.radial, mean=0, std=std)
         nn.init.uniform_(self.angular, 0, 2 * math.pi)
 
@@ -106,7 +129,7 @@ class Weights(nn.Module):
         # which depend on broadcasting. Therefore we have to manually call
         # `expand` on all operands to allow jiting
         f = self.total_channels
-        r = self.n_rings
+        r = self.n_rings - 1
         a = self.n_angles
 
         real = torch.cos(
@@ -129,4 +152,7 @@ class Weights(nn.Module):
             Interpolate the results of `polar_harmonics()` onto Cartesian grid
         '''
         polar_harm = self.polar_harmonics()
-        return torch.einsum('cfra,dera->cfde', (polar_harm, self.gauss_interp))
+        interpolated = torch.einsum('cfra,dera->cfde', (polar_harm, self.gauss_interp))
+        interpolated += self.center.reshape(1, -1, 1, 1) * self.gauss_center
+
+        return interpolated
