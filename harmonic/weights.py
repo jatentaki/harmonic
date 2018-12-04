@@ -23,11 +23,8 @@ class Weights(nn.Module):
         self.n_rings = int(math.ceil(self.radius)) + 1
         self.n_angles = 4 * (size - 1)
 
-        self.center = nn.Parameter(
-            # the r=0 element is special-cased because it has ill-defined angles.
-            # self.radial and self.angular consider only the remaining elements
-            torch.randn(self.total_channels, requires_grad=True)
-        )
+        # for filters of order different than 0, the total contribution of element
+        # r=0 is 0, so we skip it
         self.radial = nn.Parameter(
             torch.randn(self.total_channels, self.n_rings - 1, requires_grad=True)
         )
@@ -38,8 +35,12 @@ class Weights(nn.Module):
         self.precompute_grid()
         self.register_buffer('gauss_interp', self.precompute_gaussian())
 
-        gauss_center = self.precompute_center().reshape(1, 1, self.size, self.size)
-        self.register_buffer('gauss_center', gauss_center)
+        if self.order == 0:
+            self.center = nn.Parameter(
+                torch.randn(self.total_channels, requires_grad=True)
+            )
+            gauss_center = self.precompute_center().reshape(1, 1, self.size, self.size)
+            self.register_buffer('gauss_center', gauss_center)
 
         if initialize:
             self.initialize_weights()
@@ -113,9 +114,11 @@ class Weights(nn.Module):
         
         n_contributing = self.total_channels * self.size ** 2
         std = 2. / math.sqrt(n_contributing)
-        nn.init.normal_(self.center, mean=0, std=std)
         nn.init.normal_(self.radial, mean=0, std=std)
         nn.init.uniform_(self.angular, 0, 2 * math.pi)
+
+        if self.order == 0:
+            nn.init.normal_(self.center, mean=0, std=std)
 
 
     @dimchecked
@@ -153,6 +156,8 @@ class Weights(nn.Module):
         '''
         polar_harm = self.polar_harmonics()
         interpolated = torch.einsum('cfra,dera->cfde', (polar_harm, self.gauss_interp))
-        interpolated += self.center.reshape(1, -1, 1, 1) * self.gauss_center
+
+        if self.order == 0:
+            interpolated += self.center.reshape(1, -1, 1, 1) * self.gauss_center
 
         return interpolated
