@@ -31,8 +31,8 @@ class Weights(nn.Module):
         )
 
         self.precompute_grid()
-        gauss = self.precompute_gaussian()
-        self.register_buffer('gauss', gauss)
+        gauss_interp = self.precompute_gaussian()
+        self.register_buffer('gauss_interp', gauss_interp)
 
         if initialize:
             self.initialize_weights()
@@ -57,8 +57,10 @@ class Weights(nn.Module):
         '''
 
         # compute cartesian coordinates of each polar grid point
-        p_xs = self.radial_grid.unsqueeze(1) * torch.cos(self.angular_grid).unsqueeze(0)
-        p_ys = self.radial_grid.unsqueeze(1) * torch.sin(self.angular_grid).unsqueeze(0)
+        p_xs = self.radial_grid.unsqueeze(1) * \
+               self.angular_grid.cos().unsqueeze(0)
+        p_ys = self.radial_grid.unsqueeze(1) * \
+               self.angular_grid.sin().unsqueeze(0)
 
         # compute cartesian coordinates of each cartesian grid point
         c_xs = torch.linspace(-self.size/2, self.size/2, self.size)
@@ -127,4 +129,4 @@ class Weights(nn.Module):
             Interpolate the results of `polar_harmonics()` onto Cartesian grid
         '''
         polar_harm = self.polar_harmonics()
-        return torch.einsum('cfra,dera->cfde', (polar_harm, self.gauss))
+        return torch.einsum('cfra,dera->cfde', (polar_harm, self.gauss_interp))
