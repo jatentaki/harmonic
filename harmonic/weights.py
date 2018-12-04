@@ -23,10 +23,10 @@ class Weights(nn.Module):
         self.n_rings = int(math.ceil(self.radius)) + 1
         self.n_angles = 4 * (size - 1)
 
-        self.r = nn.Parameter(
+        self.radial = nn.Parameter(
             torch.randn(self.total_channels, self.n_rings, requires_grad=True)
         )
-        self.betas = nn.Parameter(
+        self.angular = nn.Parameter(
             torch.randn(self.total_channels, self.n_rings, requires_grad=True)
         )
 
@@ -41,11 +41,11 @@ class Weights(nn.Module):
     def precompute_grid(self):
         # note: we need to sample angles in [0, 2*pi) thus we take 1 more
         # sample than necessary and discard it
-        angles = torch.linspace(0, 2 * math.pi, self.n_angles + 1)[:-1]
-        radii = torch.linspace(0, self.size / 2, self.n_rings)
+        angular_grid = torch.linspace(0, 2 * math.pi, self.n_angles + 1)[:-1]
+        radial_grid = torch.linspace(0, self.size / 2, self.n_rings)
     
-        self.register_buffer('angles', angles)
-        self.register_buffer('radii', radii)
+        self.register_buffer('angular_grid', angular_grid)
+        self.register_buffer('radial_grid', radial_grid)
     
 
     @dimchecked
@@ -57,8 +57,8 @@ class Weights(nn.Module):
         '''
 
         # compute cartesian coordinates of each polar grid point
-        p_xs = self.radii.unsqueeze(1) * torch.cos(self.angles).unsqueeze(0)
-        p_ys = self.radii.unsqueeze(1) * torch.sin(self.angles).unsqueeze(0)
+        p_xs = self.radial_grid.unsqueeze(1) * torch.cos(self.angular_grid).unsqueeze(0)
+        p_ys = self.radial_grid.unsqueeze(1) * torch.sin(self.angular_grid).unsqueeze(0)
 
         # compute cartesian coordinates of each cartesian grid point
         c_xs = torch.linspace(-self.size/2, self.size/2, self.size)
@@ -89,15 +89,15 @@ class Weights(nn.Module):
         
         n_contributing = self.total_channels * self.size ** 2
         std = 2. / math.sqrt(n_contributing)
-        nn.init.normal_(self.r, mean=0, std=std)
-        nn.init.uniform_(self.betas, 0, 2 * math.pi)
+        nn.init.normal_(self.radial, mean=0, std=std)
+        nn.init.uniform_(self.angular, 0, 2 * math.pi)
 
 
     @dimchecked
     def polar_harmonics(self) -> [2, 'f', 'ring', 'angle']:
         '''
             Synthesize filters in polar coordinates. Grid is given by `angles` and
-            `radii`, parameters by `betas` (phase offset) and `r` (radial profile)
+            `radii`, parameters by `angular` (phase offset) and `r` (radial profile)
         '''
 
         # FIXME: until an upcoming PR by Adam Paszke jit fails with operations
@@ -108,16 +108,16 @@ class Weights(nn.Module):
         a = self.n_angles
 
         real = torch.cos(
-            self.order * self.angles.reshape(1, 1, -1).expand(f, r, a) +
-            self.betas.unsqueeze(2).expand(f, r, a)
+            self.order * self.angular_grid.reshape(1, 1, -1).expand(f, r, a) +
+            self.angular.unsqueeze(2).expand(f, r, a)
         )
         imag = torch.sin(
-            self.order * self.angles.reshape(1, 1, -1).expand(f, r, a) +
-            self.betas.unsqueeze(2).expand(f, r, a)
+            self.order * self.angular_grid.reshape(1, 1, -1).expand(f, r, a) +
+            self.angular.unsqueeze(2).expand(f, r, a)
         )
 
-        real = real * self.r.unsqueeze(2).expand(f, r, a)
-        imag = imag * self.r.unsqueeze(2).expand(f, r, a)
+        real = real * self.radial.unsqueeze(2).expand(f, r, a)
+        imag = imag * self.radial.unsqueeze(2).expand(f, r, a)
 
         return cmplx(real, imag)
 
