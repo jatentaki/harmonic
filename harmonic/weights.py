@@ -42,7 +42,7 @@ class Weights(nn.Module):
         # note: we need to sample angles in [0, 2*pi) thus we take 1 more
         # sample than necessary and discard it
         angular_grid = torch.linspace(0, 2 * math.pi, self.n_angles + 1)[:-1]
-        radial_grid = torch.linspace(0, self.size / 2, self.n_rings)
+        radial_grid = torch.linspace(0, self.radius, self.n_rings)
     
         self.register_buffer('angular_grid', angular_grid)
         self.register_buffer('radial_grid', radial_grid)
@@ -78,8 +78,8 @@ class Weights(nn.Module):
         dist = torch.sqrt(dist2)
 
         # evaluate Gaussian function on distances
-        gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2))
-        gauss = gauss / gauss.sum(dim=(0, 1), keepdim=True)
+        norm = 1 / math.sqrt(2 * math.pi * sigma ** 2)
+        gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2)) / norm
 
         return gauss 
 

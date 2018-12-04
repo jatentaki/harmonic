@@ -78,7 +78,7 @@ class _HConvConstr(nn.Module):
         self.size = size
         self.pad = pad
 
-        self.radius = radius if radius is not None else size / 2 - 1
+        self.radius = radius if radius is not None else size / 2 - 0.5
         self.weights = nn.ModuleDict()
 
         # 2d convolutions take features_in feature maps as input,
