@@ -78,8 +78,8 @@ class Weights(nn.Module):
         dist = torch.sqrt(dist2)
 
         # evaluate Gaussian function on distances
-        norm = 1 / math.sqrt(2 * math.pi * sigma ** 2)
-        gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2)) / norm
+        gauss = torch.exp(- dist ** 2 / (2 * sigma ** 2))
+        gauss /= gauss.sum(dim=(2, 3), keepdim=True)
 
         return gauss 
 
