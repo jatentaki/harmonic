@@ -26,7 +26,7 @@ class _HConv(nn.Module):
         self.pad = pad
 
         self.constrained = True
-        self.conv = _HConvConstr(in_repr, out_repr, size, radius=None, dim=dim)
+        self.conv = _HConvConstr(in_repr, out_repr, size, radius=radius, dim=dim)
 
         self.radius = self.conv.radius
 
@@ -44,6 +44,7 @@ class _HConv(nn.Module):
         conv = _RelaxedHConv(self.conv)
         del self.conv
         self.conv = conv
+        self.constrained = False
 
         return self
 
