@@ -8,7 +8,7 @@ class INormTests(unittest.TestCase):
         b, h, w = 5, 30, 40
 
         repr = (2, 3)
-        inorm = InstanceNorm2d(repr)
+        inorm = InstanceNorm2d(repr, eps=0.)
 
         inp = torch.randn(2, b, sum(repr), h, w)
         feature_means = torch.randn(sum(repr)).reshape(1, 1, -1, 1, 1)
