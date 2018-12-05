@@ -1,5 +1,5 @@
 import torch, unittest
-from harmonic.d2.conv import HConv2d
+from harmonic.d2.conv import HConv2d, HConv1x1_2d
 from utils import rot90
 
 class HConvTests(unittest.TestCase):
@@ -151,4 +151,45 @@ class RelaxationTests(unittest.TestCase):
         self.assertTrue(torch.allclose(h_fwd, c_fwd))
         self.assertGreater(c_params, h_params)
 
-unittest.main()
+class Conv1x1Tests(unittest.TestCase):
+    def test_equivariance_1x1(self):
+        b, r, h, w = 5, 7, 50, 50
+
+        rep1 = (2, )
+        rep2 = (1, 3, 3)
+        rep3 = (3, 5, 6)
+        rep4 = (2, )
+
+        cconv1 = HConv2d(rep1, rep2, r).double()
+        cconv2 = HConv1x1_2d(rep2, rep3).double()
+        cconv3 = HConv2d(rep3, rep4, r).double()
+
+        inp = torch.randn(2, b, rep1[0], h, w, dtype=torch.float64)
+        rot = rot90(inp)
+
+        base_fwd = cconv3(cconv2(cconv1(inp)))
+        rot_fwd = cconv3(cconv2(cconv1(rot)))
+
+        diff = (rot90(base_fwd) - rot_fwd).max().item()
+        
+        self.assertLess(diff, 1e-3)
+
+    def test_relaxation_1x1(self):
+        b, h, w = 5, 50, 50
+
+        rep1 = (1, 3, 3)
+        rep2 = (3, 5, 6)
+        inp = torch.randn(2, b, sum(rep1), h, w, dtype=torch.float64)
+
+        hconv = HConv1x1_2d(rep1, rep2).double()
+        h_params = sum(p.numel() for p in hconv.parameters())
+        h_fwd = hconv(inp)
+
+        cconv = hconv.relax()
+        c_params = sum(p.numel() for p in cconv.parameters())
+        c_fwd = cconv(inp)
+
+        self.assertTrue(torch.allclose(h_fwd, c_fwd))
+        self.assertGreater(c_params, h_params)
+
+unittest.main(failfast=True)
