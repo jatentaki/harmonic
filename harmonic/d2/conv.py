@@ -1,18 +1,23 @@
 from torch_dimcheck import dimchecked
 
-from .._convolution import _HConv#, cconv_nd
+from .._convolution import _HConv
 
-#@dimchecked
-#def complex_conv(x: [2, 'b',     'f_in', 'hx', 'wx'],
-#                 w: [2, 'f_out', 'f_in', 'hk', 'wk'],
-#                 pad=False) -> [2, 'b', 'f_out', 'ho', 'wo']:
-#    return cconv_nd(x, w, pad=pad, dim=2)
-#
-#
 class HConv2d(_HConv):
-    def __init__(self, in_repr, out_repr, size, radius=None, pad=False):
+    def __init__(self, in_repr, out_repr, size, radius=None, conv_kwargs=dict()):
         super(HConv2d, self).__init__(
-            in_repr, out_repr, size, pad=pad, dim=2, radius=radius
+            in_repr, out_repr, size, dim=2, radius=radius, 
+            transpose=False, conv_kwargs=conv_kwargs
+        )
+
+    @dimchecked
+    def forward(self, x: [2, 'b', 'fi', 'hx', 'wx']) -> [2, 'b', 'fo', 'ho', 'wo']:
+        return super(HConv2d, self).forward(x)
+
+class HConv2dTranspose(_HConv):
+    def __init__(self, in_repr, out_repr, size, radius=None, conv_kwargs=dict()):
+        super(HConv2d, self).__init__(
+            in_repr, out_repr, size, dim=2, radius=radius,
+            transpose=True, conv_kwargs=conv_kwargs
         )
 
     @dimchecked

@@ -25,22 +25,23 @@ def from_real(real: [...]) -> [2, ...]:
 @dimchecked
 def conv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
             w: [2, 'f_out', 'f_in', 'hk', 'wk', ...,],
-            dim=2, pad=False) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
+            dim=2, transpose=False, **kwargs) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
 
     if dim not in [2, 3]:
         raise ValueError("Dim can only be 2 or 3, got {}".format(dim))
 
-    if pad:
-        padding = w.shape[3] // 2
-    else:
-        padding = 0
+    options = {
+        (2, False): F.conv2d,
+        (3, False): F.conv3d,
+        (2, True): F.conv_transpose2d,
+        (3, True): F.conv_transpose3d
+    }
+    conv = options[(dim, transpose)]
 
-    conv = F.conv3d if dim == 3 else F.conv2d
+    real = conv(x[0, ...], w[0, ...], **kwargs) - \
+           conv(x[1, ...], w[1, ...], **kwargs)
 
-    real = conv(x[0, ...], w[0, ...], padding=padding) - \
-           conv(x[1, ...], w[1, ...], padding=padding)
-
-    imag = conv(x[0, ...], w[1, ...], padding=padding) + \
-           conv(x[1, ...], w[0, ...], padding=padding)
+    imag = conv(x[0, ...], w[1, ...], **kwargs) + \
+           conv(x[1, ...], w[0, ...], **kwargs)
 
     return cmplx(real, imag)

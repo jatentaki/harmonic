@@ -13,7 +13,8 @@ def ords2s(in_ord, out_ord):
 
 @localized_module
 class _HConv(nn.Module):
-    def __init__(self, in_repr, out_repr, size, radius=None, dim=2, pad=False):
+    def __init__(self, in_repr, out_repr, size, radius=None, dim=2,
+                 transpose=False, conv_kwargs=dict()):
         super(_HConv, self).__init__()
 
         if dim not in [2, 3]:
@@ -23,7 +24,8 @@ class _HConv(nn.Module):
         self.in_repr = in_repr
         self.out_repr = out_repr
         self.size = size
-        self.pad = pad
+        self.transpose = transpose
+        self.conv_kwargs = conv_kwargs
 
         self.constrained = True
         self.conv = _HConvConstr(in_repr, out_repr, size, radius=radius, dim=dim)
@@ -49,10 +51,11 @@ class _HConv(nn.Module):
         return self
 
     def __repr__(self):
-        fmt = '{}HConv{}d(repr_in={}, repr_out={}, size={}, radius={})'
+        fmt = '{}HConv{}{}d(repr_in={}, repr_out={}, size={}, radius={}, {})'
         msg = fmt.format(
-            'Constr' if self.constrained else 'Relaxed',
-            self.dim, self.in_repr, self.out_repr, self.size, self.radius
+            'Constr' if self.constrained else 'Relaxed', self.dim,
+            'Transpose' if self.transpose else '', self.in_repr, self.out_repr,
+            self.size, self.radius, self.conv_kwargs
         )
         return msg
 
@@ -64,19 +67,21 @@ class _HConv(nn.Module):
             msg = fmt.format(self.in_repr, sum(self.in_repr), x.shape[2])
             raise ValueError(msg)
 
-        return conv_nd(x, self.conv.synthesize(), dim=self.dim, pad=self.pad)
+        return conv_nd(
+            x, self.conv.synthesize(), dim=self.dim,
+            transpose=self.transpose, **self.conv_kwargs
+        )
         
 
 @localized_module
 class _HConvConstr(nn.Module):
-    def __init__(self, in_repr, out_repr, size, radius=None, dim=2, pad=False):
+    def __init__(self, in_repr, out_repr, size, radius=None, dim=2):
         super(_HConvConstr, self).__init__()
 
         self.dim = dim
         self.in_repr = in_repr
         self.out_repr = out_repr
         self.size = size
-        self.pad = pad
 
         self.radius = radius if radius is not None else size / 2 - 0.5
         self.weights = nn.ModuleDict()
