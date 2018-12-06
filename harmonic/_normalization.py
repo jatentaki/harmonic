@@ -13,8 +13,9 @@ class _Normalization(nn.Module):
         if dim not in [2, 3]:
             raise ValueError(f"Allowed dim values are 2 and 3, got {dim}")
 
-        if kind not in ['batch', 'instance']:
-            msg = f"Allowed kind values are 'batch' and 'instance', got {kind}"
+        kinds = ['batch', 'instance', 'item']
+        if kind not in kinds:
+            msg = f"Allowed kind values are '{kinds}', got {kind}"
             raise ValueError(msg)
 
         self.repr = repr
@@ -34,6 +35,8 @@ class _Normalization(nn.Module):
         reduce_dims = [3, 4]
         if self._kind == 'batch':
             reduce_dims.append(1)
+        if self._kind == 'item':
+            reduce_dims.append(2)
         if self._dim == 3:
             reduce_dims.append(5)
 
