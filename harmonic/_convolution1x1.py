@@ -83,6 +83,10 @@ class _HConvConstr_1x1(nn.Module):
     def __init__(self, in_repr, out_repr, dim=2):
         super(_HConvConstr_1x1, self).__init__()
 
+        if len(in_repr) != len(out_repr):
+            msg = f"Length of in_repr={in_repr} does not match out_repr={out_repr}"
+            raise ValueError(msg)
+
         self.dim = dim
         self.in_repr = in_repr
         self.out_repr = out_repr
@@ -100,6 +104,9 @@ class _HConvConstr_1x1(nn.Module):
                        f'{out_mul} fmaps of order {i} out of thin air')
                 raise ValueError(msg)
 
+            if in_mul == 0 and out_mul == 0:
+                continue
+
             self.blocks[f'{i}'] = Block(out_mul, in_mul, dim=dim, name=f'block{i}')
 
     def __repr__(self):
@@ -112,6 +119,9 @@ class _HConvConstr_1x1(nn.Module):
         
         s_ix = 0
         for i, mult in enumerate(self.in_repr):
+            if mult == 0:
+                continue
+
             maps = x[:, :, s_ix:s_ix+mult, ...]
             block = self.blocks[f'{i}']
             fmaps.append(block(maps))
