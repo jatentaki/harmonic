@@ -192,4 +192,16 @@ class Conv1x1Tests(unittest.TestCase):
         self.assertTrue(torch.allclose(h_fwd, c_fwd))
         self.assertGreater(c_params, h_params)
 
+    def test_different_length_fails(self):
+        with self.assertRaises(ValueError):
+            HConv1x1_2d((3, 2), (1,))
+
+    def test_different_something_to_zero_fails(self):
+        with self.assertRaises(ValueError):
+            HConv1x1_2d((3, 2), (1, 0))
+
+    def test_different_zero_to_something_fails(self):
+        with self.assertRaises(ValueError):
+            HConv1x1_2d((0, 2), (1, 2))
+
 unittest.main(failfast=True)
