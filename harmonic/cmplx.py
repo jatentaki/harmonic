@@ -25,7 +25,8 @@ def from_real(real: [...]) -> [2, ...]:
 @dimchecked
 def conv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
             w: [2, 'f_out', 'f_in', 'hk', 'wk', ...,],
-            dim=2, transpose=False, **kwargs) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
+            dim=2, transpose=False, hermitian=False,
+            **kwargs) -> [2, 'b', 'f_out', 'ho', 'wo', ...]:
 
     if dim not in [2, 3]:
         raise ValueError("Dim can only be 2 or 3, got {}".format(dim))
@@ -37,6 +38,11 @@ def conv_nd(x: [2, 'b',     'f_in', 'hx', 'wx', ...,],
         (3, True): F.conv_transpose3d
     }
     conv = options[(dim, transpose)]
+
+    if transpose or hermitian:
+        w = w.transpose(1, 2)
+    if hermitian:
+        w = torch.flip(w, [0])
 
     real = conv(x[0, ...], w[0, ...], **kwargs) - \
            conv(x[1, ...], w[1, ...], **kwargs)
