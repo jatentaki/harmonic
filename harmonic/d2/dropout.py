@@ -18,7 +18,7 @@ class Dropout2d(torch.jit.ScriptModule):
                 dtype=torch.float32, device=x.device
             )
 
-            should_drop = (sample < self.p).to(torch.float32)
+            should_drop = (sample > self.p).to(torch.float32)
             result = x * should_drop / (1. - self.p)
         else:
             result = x
@@ -29,8 +29,7 @@ class Dropout2d(torch.jit.ScriptModule):
         return f'Dropout2d(p={self.p})'
 
 if __name__ == '__main__':
-    data = torch.randn(2, 1, 5, 2, 2) 
-    d = Dropout2d(p=0.6)
+    data = torch.randn(2, 1, 30, 2, 2) 
+    d = Dropout2d()
     o = d(data)
     print(o)
-    print(d)
