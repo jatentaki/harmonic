@@ -14,7 +14,7 @@ class Dropout2d(torch.jit.ScriptModule):
     def forward(self, x):
         if self.training:
             sample = torch.rand(
-                (1, 1, x.size(2), 1, 1),
+                (x.size(0), 1, x.size(2), 1, 1),
                 dtype=torch.float32, device=x.device
             )
 
