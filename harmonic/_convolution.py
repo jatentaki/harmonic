@@ -51,13 +51,9 @@ class _HConv(nn.Module):
         return self
 
     def __repr__(self):
-        fmt = '{}HConv{}{}d(repr_in={}, repr_out={}, size={}, radius={}, {})'
-        msg = fmt.format(
-            'Constr' if self.constrained else 'Relaxed', self.dim,
-            'Transpose' if self.transpose else '', self.in_repr, self.out_repr,
-            self.size, self.radius, self.conv_kwargs
-        )
-        return msg
+        return (f'HConv{self.dim}d(in={self.repr_in}, out={self.repr_out}, '
+                f'size={self.size}, radius={self.size}, constr={self.constrained}, '
+                f'trans={self.transpose}, {self.conv_kwargs}')
 
 
     def forward(self, x: [2, 'b', 'fi', 'hx', 'wx', ...]
