@@ -45,7 +45,7 @@ class _HConv_1x1(nn.Module):
         return self
 
     def __repr__(self):
-        fmt = '{}HConv{}d_1x1(repr_in={}, repr_out={}, size=1)'
+        fmt = '{}HConv{}d_1x1(in_repr={}, out_repr={}, size=1)'
         msg = fmt.format(
             'Constr' if self.constrained else 'Relaxed', self.dim,
             self.in_repr, self.out_repr,
@@ -110,7 +110,7 @@ class _HConvConstr_1x1(nn.Module):
             self.blocks[f'{i}'] = Block(out_mul, in_mul, dim=dim, name=f'block{i}')
 
     def __repr__(self):
-        fmt = '_HConvConstr{}d_1x1(repr_in={}, repr_out={})'
+        fmt = '_HConvConstr{}d_1x1(in_repr={}, out_repr={})'
         msg = fmt.format(self.dim, self.in_repr, self.out_repr)
         return msg
 
@@ -160,7 +160,7 @@ class _RelaxedHConv_1x1(nn.Module):
         self.kernel = nn.Parameter(kernel.detach(), requires_grad=True)
 
     def __repr__(self):
-        fmt = '_RelaxedHConv{}d_1x1(repr_in={}, repr_out={})'
+        fmt = '_RelaxedHConv{}d_1x1(in_repr={}, out_repr={})'
         msg = fmt.format(
             self.dim, self.in_repr, self.out_repr
         )

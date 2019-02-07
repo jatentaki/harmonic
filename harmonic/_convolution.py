@@ -51,7 +51,7 @@ class _HConv(nn.Module):
         return self
 
     def __repr__(self):
-        return (f'HConv{self.dim}d(in={self.repr_in}, out={self.repr_out}, '
+        return (f'HConv{self.dim}d(in={self.in_repr}, out={self.out_repr}, '
                 f'size={self.size}, radius={self.size}, constr={self.constrained}, '
                 f'trans={self.transpose}, {self.conv_kwargs}')
 
@@ -108,7 +108,7 @@ class _HConvConstr(nn.Module):
             self.weights[ords2s(in_ord, out_ord)] = weight 
 
     def __repr__(self):
-        fmt = '_HConvConstr{}d(repr_in={}, repr_out={}, size={}, radius={})'
+        fmt = '_HConvConstr{}d(in_repr={}, out_repr={}, size={}, radius={})'
         msg = fmt.format(
             self.dim, self.in_repr, self.out_repr, self.size, self.radius
         )
@@ -159,7 +159,7 @@ class _RelaxedHConv(nn.Module):
         return self.kernel
 
     def __repr__(self):
-        fmt = '_RelaxedHConv{}d(repr_in={}, repr_out={}, size={}, radius={})'
+        fmt = '_RelaxedHConv{}d(in_repr={}, out_repr={}, size={}, radius={})'
         msg = fmt.format(
             self.dim, self.in_repr, self.out_repr, self.size, self.radius
         )

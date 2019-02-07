@@ -69,9 +69,6 @@ class HConvTransposeTests(unittest.TestCase):
 #        self.assertEqual(inp.shape, base_fwd.shape)
 
         diff = (base_fwd - rot_fwd)
-
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots()
         
         ax.set_aspect('equal')
 
@@ -80,19 +77,6 @@ class HConvTransposeTests(unittest.TestCase):
         diff_np = rot_fwd_np - base_fwd_np
         ax.quiver(rot_fwd_np[0, 0, 0], base_fwd_np[0, 0, 0])
 
-        plt.show()
-#        import matplotlib.pyplot as plt
-#        fig, (a1, a2) = plt.subplots(2)
-#        
-#        a1.set_aspect('equal')
-#        a2.set_aspect('equal')
-#
-#        rot_fwd_np = rot_fwd.detach().numpy()
-#        base_fwd_np = base_fwd.detach().numpy()
-#        a1.quiver(rot_fwd_np[0, 0, 0], rot_fwd_np[1, 0, 0])
-#        a2.quiver(base_fwd_np[0, 0, 0], base_fwd_np[1, 0, 0])
-#
-#        plt.show()
         
         self.assertLess(diff.max().item(), 1e-5)
 
